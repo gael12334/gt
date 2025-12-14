@@ -4,6 +4,10 @@
 
 #pragma once
 
-// TODO: add calc functions
+int calc_even(int value);
 
-void calc_loop(void);
+float calc_median(const float* set, unsigned size);
+
+float calc_mean(const float* set, unsigned size);
+
+float calc_sum(const float* set, unsigned size);

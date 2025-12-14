@@ -1,4 +1,10 @@
+<!--
+    Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
+-->
+
 This is a micro C test library with pretty output.
+
+![](imgs/output.png)
 
 Assertion macros: 
 

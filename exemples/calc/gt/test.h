@@ -1,6 +1,6 @@
 /*
     Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
- */
+*/
 
 #pragma once
 #include <stdio.h>
@@ -20,6 +20,10 @@ void _gt_bin_op(const char *op, const _gt_str_t param1, const _gt_str_t param2, 
 void _gt_success(const char *func);
 
 #define _gt_passed() _gt_success(__func__);
+
+#define _gt_test(fn, opt_case) void test_##fn##_##opt_case(void)
+
+#define _gt_run(fn, opt_case) test_##fn##_##opt_case()
 
 #define _gt_get_info() \
     (_gt_info_t) { .file = __FILE__, .func = __func__, .line = __LINE__ }
@@ -43,8 +47,8 @@ void _gt_success(const char *func);
         if (!(_n1 op _n2))                                         \
         {                                                          \
             char _nb1[50], _nb2[50];                               \
-            sprintf(_nb1, "%li", _n1);                             \
-            sprintf(_nb2, "%li", _n2);                             \
+            sprintf(_nb1, "%lf", _n1);                             \
+            sprintf(_nb2, "%lf", _n2);                             \
             _gt_bin_op(#op, _nb1, _nb2, #n1, #n2, _gt_get_info()); \
             return;                                                \
         }                                                          \
@@ -67,13 +71,13 @@ void _gt_success(const char *func);
     }                             \
     putchar('\n');
 
-#define _gt_test_print(format, ...)                             \
-    {                                                           \
-        _gt_test_print_line(50);                                \
+#define _gt_test_print(format, ...)                     \
+    {                                                   \
+        _gt_test_print_line(50);                        \
         printf("'%s', Line %u:\n", __func__, __LINE__); \
-        _gt_test_print_line(50);                                \
-        printf(format, __VA_ARGS__);                            \
-        _gt_test_print_line(50);                                \
+        _gt_test_print_line(50);                        \
+        printf(format, __VA_ARGS__);                    \
+        _gt_test_print_line(50);                        \
     }
 
 #define _gt_test_int_eq(n1, n2) \
