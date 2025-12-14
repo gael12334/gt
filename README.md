@@ -1,12 +1,16 @@
 <!--
     Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 -->
-
-This is a micro C test library with pretty output.
+## gt
+gt is an assertion library for writing unit tests in C. It provides a non-intrusive way of writing assertion to validate the behavior of the tested code. When an assertion fails, it displays a colorful report with useful information, such as the line number, the expressions that failed the assertion and the values held by the expressions. 
 
 ![](imgs/output.png)
 
-Assertion macros: 
+## Macros
+
+### Assertion macros
+
+The table below contains the macro signature and a short description of its use case.
 
 | Macro                        | Description                                            |
 | ---------------------------- | ------------------------------------------------------ |
@@ -27,12 +31,17 @@ Assertion macros:
 | `_gt_test_int_lte(n1, n2)`   | Asserts n1 lesser or equal to n2 for integer values    |
 | `_gt_test_float_lte(n1, n2)` | Asserts n1 lesser or equal to than n2 for real values  |
 
-Debug print macro: 
+### Debug print macro
 
-`_gt_test_print(format, ...)` : Shows the function and line of usage and makes a box arround diplayed text.
+The macro below is a wrapper of the function `printf`. This macro displays the location where it was used, then calls printf with provided parameters. This macro is useful for keeping track of the location of temporary debug prints. 
+ 
+- `_gt_test_print(format, ...)` : Shows the function and line of usage and makes a box arround diplayed text.
 
-Test macros: 
+### Function signature macro
 
-`_gt_test(name, opt_case)` : Uses a template to name the test's function. Exemple: `_gt_test(calc_median, empty_set_null_set)` yields `void test_calc_median_empty_set_null_set(void)`. 
-`_gt_run(name, opt_case)` : Calls the specified test.
+Macros to use when creating and using a test function. 
+
+- `_gt_test(name, opt_case)` : Macro that names the test function for you.
+
+- `_gt_run(name, opt_case)` : Runs a test function named with `_gt_test` macro.
 
