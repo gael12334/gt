@@ -15,12 +15,6 @@ typedef struct _gt_info
     unsigned line;
 } _gt_info_t;
 
-typedef struct _gt_obj
-{
-    const char *data;
-    size_t size;
-} _gt_obj_t;
-
 void _gt_bin_op(const char *op, const _gt_str_t param1, const _gt_str_t param2, const _gt_str_t expr1, const _gt_str_t expr2, _gt_info_t info);
 
 void _gt_success(const char *func);
