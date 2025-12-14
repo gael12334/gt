@@ -30,3 +30,9 @@ Assertion macros:
 Debug print macro: 
 
 `_gt_test_print(format, ...)` : Shows the function and line of usage and makes a box arround diplayed text.
+
+Test macros: 
+
+`_gt_test(name, opt_case)` : Uses a template to name the test's function. Exemple: `_gt_test(calc_median, empty_set_null_set)` yields `void test_calc_median_empty_set_null_set(void)`. 
+`_gt_run(name, opt_case)` : Calls the specified test.
+
