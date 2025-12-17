@@ -16,3 +16,7 @@ The documentation for provided macros and functions is available at  [docs/doc.m
 2. Run [./deps/gt_download.sh](deps/gt_download.sh). It will download necessary files.
 3. Run [.deps/gt_install.sh](./deps/gt_install.sh). It will copy relevant files into the "src" folder of the project.
 4. To uninstall, run [.deps/gt_uninstall.sh](./deps/gt_uninstall.sh). 
+
+### Demo & example
+
+A demo is available on the [example-calc](https://github.com/gael12334/gt/tree/example-calc) branch.
