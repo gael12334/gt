@@ -5,9 +5,7 @@
 #include "cdocs/cdocs.h"
 #include "test.h"
 
-
 int main(int argc, char** argv) {
-
     _cdocs_fn_struct functions[] = {
         _cdocs_fn(
             _cdocs_fn_f(_gt_run, "Macro that execute a test declared by `_gt_test`."),

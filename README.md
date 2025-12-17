@@ -8,5 +8,5 @@ gt is an assertion library for writing unit tests in C. It provides a non-intrus
 
 ### documentation
 
-See [main.c.md](src/main.c.md) for avaiable macros and functions. 
+See [main.c.md](docs/docs.md) for avaiable macros and functions. 
 
