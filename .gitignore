@@ -1,2 +1,13 @@
 out/
+.out/
 deps/cdocs
+.kateproject
+adhoc
+adhoc_x
+adhoc_x_2
+adhoc_x_3
+asm-dump.txt
+info
+notes.txt
+out.txt
+src/adhoc.o
