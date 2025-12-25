@@ -44,6 +44,9 @@ typedef struct {
     _gt_type type;
 } _gt_asrt;
 
+extern _gt_pntr _gt_hjck;
+extern _gt_pntr _gt_hook;
+
 int _gt_set_func(_gt_strg Func);
 int _gt_set_case(_gt_strg Case);
 int _gt_end_case(void);
@@ -53,6 +56,8 @@ int _gt_chk_dble(_gt_dble val1, _gt_strg exp1, _gt_dble val2, _gt_strg exp2, _gt
 int _gt_chk_pntr(_gt_pntr val1, _gt_strg exp1, _gt_pntr val2, _gt_strg exp2, _gt_cond cond);
 int _gt_chk_strg(_gt_strg val1, _gt_strg exp1, _gt_strg val2, _gt_strg exp2, _gt_cond cond);
 void _gt_set_lctn(_gt_strg file, _gt_long line);
+void _gt_set_hjck(_gt_pntr trgt);
+void _gt_set_hook(_gt_pntr hook);
 
 #define gt_assert_long(x, y, cond) \
     _gt_set_lctn(__FILE__, __LINE__);\

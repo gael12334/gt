@@ -32,6 +32,9 @@ struct {
     _gt_long Ferr;
 } _gt = {0};
 
+_gt_pntr _gt_hjck = NULL;
+_gt_pntr _gt_hook = NULL;
+
 static int mesg_flag(_gt_long fore, _gt_long newl) {
     newl &= 1;
     fore <<= 1;
@@ -331,4 +334,12 @@ int _gt_chk_strg(_gt_strg val1, _gt_strg exp1, _gt_strg val2, _gt_strg exp2, _gt
     }
 
     return _gt.Rslt;
+}
+
+void _gt_set_hjck(_gt_pntr trgt) {
+    _gt_hjck = trgt;
+}
+
+void _gt_set_hook(_gt_pntr hook) {
+    _gt_hook = hook;
 }
