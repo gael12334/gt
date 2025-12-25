@@ -2,7 +2,8 @@
     Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
-#include "elf.h"
+#include "elfpv.h"
+#include "elfpv_buffer.h"
 #include <ctype.h>
 #include <elf.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #define print_u64(x)   printf("%-30s : %-5zu %-8lu (%lX)\n", #x, sizeof(x), x, x)
 #define print_str(x)   printf("%-30s : %-5zu %s\n", #x, strlen(x), x)
 #define print_buf(x,n) printf("%-30s : %-5zu ", #x, (size_t)n); for(int _xijk = 0; _xijk < n; _xijk++) printf("%02hhX ", x[_xijk]); fputc('\n', stdout)
+#define print_dbg() printf("%s %i\n", __FILE__, __LINE__)
 #define bar_length 55
 #define TEXT_NOP (0x90)
 #define TEXT_ENDBR64_OFFSET (4)
@@ -80,20 +82,46 @@ static const uint8_t patch_template[] = {
         0xc3                                        // ret
 };
 
+static const char* elf_hijack_symbol_name;
+static const char* elf_hook_symbol_name;
+static size_t elf_file_size = 0;
+
+void elf_set_symbol_name(const char* hijack, const char* hook) {
+    elf_hijack_symbol_name = hijack;
+    elf_hook_symbol_name = hook;
+}
+
 // ---- loading ----
 
-char* elf_load(const char* path, size_t* not_null_size) {
-    FILE* f = fopen(path, "r");
+static FILE* elf_open_file(const char* path, size_t* size) {
+    FILE* f = fopen(path, "rb");
     if(f == NULL) { return NULL; }
-    Elf64_Ehdr h;
-    fread(&h, sizeof(h), 1, f);
-    size_t fsz = h.e_shoff + h.e_shentsize * h.e_shnum;
-    *not_null_size = h.e_ehsize + fsz;
-    char* b = malloc(*not_null_size);
-    memcpy(b, &h, sizeof(h));
-    fread(b + sizeof(h), fsz - h.e_ehsize, 1, f);
+    fseeko(f, 0, SEEK_END);
+    *size = ftello(f);
+    fseeko(f, 0, SEEK_SET);
+    return f;
+}
+
+elfpv_buffer elf_load(const char* path, size_t* not_null_size) {
+    elfpv_buffer buffer = {0};
+    FILE* f = elf_open_file(path, not_null_size);
+    if(!f) { return buffer; }
+
+    buffer = elfpv_create_buffer(*not_null_size);
+    if(elfpv_error_thrown()) { return buffer; }
+
+    elfpv_buffer_value b;
+    for(size_t i = 0; i < *not_null_size; i++) {
+        fread(&b._u8, 1, 1, f);
+        elfpv_write_buffer(buffer, i, ELFPV_BUFFER_VALUE_UINT8, b);
+        if(elfpv_error_thrown()) {
+            elfpv_print_buffer_error();
+            return (elfpv_buffer) {0};
+        }
+    }
+
     fclose(f);
-    return b;
+    return buffer;
 }
 
 void elf_save(const char* path, char* buffer, size_t size) {
@@ -237,6 +265,7 @@ Elf64_Sym* elf_get_symbol_by_type(Elf64_Sym* symbol_list, size_t number, size_t 
 
 size_t elf_get_symbol_type(Elf64_Ehdr* header, Elf64_Sym* symbol) {
     size_t type = ELF64_ST_TYPE(symbol->st_info);
+    print_dbg();
     return type;
 }
 
@@ -267,7 +296,9 @@ uint8_t* elf_get_symbol_text(Elf64_Ehdr* header, Elf64_Sym* symbol) {
 
 size_t elf_get_symbol_text_padding(Elf64_Sym* symbol, const uint8_t* text, size_t offset, uint8_t pad) {
     size_t i = offset;
-    while(i < symbol->st_size && text[i] == pad) { i++; }
+    print_dbg();
+
+    while(i < symbol->st_size && text[i] == pad) { i++; print_u64(i);}
     return i - offset;
 }
 
@@ -327,12 +358,21 @@ uint8_t* elf_get_text(Elf64_Ehdr* header, Elf64_Sym* symbol, size_t* not_null_si
 }
 
 void elf_patch_text(Elf64_Ehdr* header, Elf64_Sym* symbol, Elf64_Sym* hijack, Elf64_Sym* hook) {
+    print_dbg();
     size_t type = elf_get_symbol_type(header, symbol);
-    if(type != STT_FUNC) { return; }
+    size_t binding = elf_get_symbol_binding(header, symbol);
 
+    if(type != STT_FUNC || binding != STB_GLOBAL) { return; }
+    elf_print_symbol(header, symbol);
+    if(symbol->st_value >= elf_file_size) { print_dbg(); return; }
+    elf_print_symbol(header, symbol);
+
+    print_dbg();
     uint8_t* text = elf_get_symbol_text(header, symbol);
     size_t padding = elf_get_symbol_text_padding(symbol, text, TEXT_ENDBR64_OFFSET, TEXT_NOP);
     if(padding < TEXT_PADDING) { return; }
+
+    print_dbg();
 
     // offset of each instruction in patch_template.
     const size_t instr_offset[] = {
@@ -350,36 +390,46 @@ void elf_patch_text(Elf64_Ehdr* header, Elf64_Sym* symbol, Elf64_Sym* hijack, El
         instr_offset[10] + 1,
     };
 
+    print_dbg();
     // offset of bytes to overwrite in instructions
     size_t instr_hijack_offset = instr_offset[1] + 3;
     size_t instr_hook_offset = instr_offset[7] + 3;
 
+    print_dbg();
     // pointer to the data in memory of the hijack & hook symbols
     void* elf_hijack_ptr = ((void*)header + hijack->st_value);
     void* elf_hook_ptr = ((void*)header + hook->st_value);
 
+    print_dbg();
     // pointer to the data in memory of the next instructions
     void* elf_hijack_next_instr_ptr = (text + instr_offset[2]);
     void* elf_hook_next_instr_ptr = (text + instr_offset[8]);
 
+    print_dbg();
     // offset between location of symbols and following instructions.
     uint32_t hijack_offset = elf_hijack_ptr - elf_hijack_next_instr_ptr;
     uint32_t hook_offset = elf_hook_ptr - elf_hook_next_instr_ptr;
 
+    print_dbg();
     // write operation
     memcpy(text + TEXT_ENDBR64_OFFSET, patch_template, sizeof(patch_template));
     memcpy(text + instr_hijack_offset, &hijack_offset, sizeof(hijack_offset));
     memcpy(text + instr_hook_offset, &hook_offset, sizeof(hook_offset));
 
+    print_dbg();
     char* name_list = elf_get_symbol_name_list(header, NULL);
     char* symbol_name = name_list + symbol->st_name;
     size_t offset = (void*)text + TEXT_ENDBR64_OFFSET - (void*)header;
     printf("wrote %zu bytes at %06lX for symbol %s\n", sizeof(patch_template), offset, symbol_name);
+
+    print_dbg();
 }
 
 void elf_patch_symbols(Elf64_Ehdr* header, Elf64_Sym* symbols, size_t number) {
-    Elf64_Sym* hijack = elf_get_symbol_by_name(header, "hijack");
-    Elf64_Sym* hook = elf_get_symbol_by_name(header, "hook");
+    print_dbg();
+
+    Elf64_Sym* hijack = elf_get_symbol_by_name(header, elf_hijack_symbol_name);
+    Elf64_Sym* hook = elf_get_symbol_by_name(header, elf_hook_symbol_name);
 
     if(hijack == NULL || hook == NULL) {
         printf("Unable to patch : hijack and/or hook symbols are absent.\n");
@@ -389,6 +439,8 @@ void elf_patch_symbols(Elf64_Ehdr* header, Elf64_Sym* symbols, size_t number) {
     for(size_t i = 0; i < number; i++) {
         elf_patch_text(header, symbols + i, hijack, hook);
     }
+
+    print_dbg();
 }
 
 void elf_patch_symbol_by_name(Elf64_Ehdr* header, const char* name, size_t buffer_size) {
@@ -483,20 +535,20 @@ void elf_menu_print(Elf64_Ehdr* header) {
 
 void elf_menu_help(void) {
     const char* commands[] = {
-        "help           : shows this.",
-        "show           : shows everything.",
-        "  header       : shows the elf header.",
-        "  section      : shows all the sections.",
-        "    <name>     : shows section with specified name.",
-        "    <index>    : shows section at specified index.",
-        "  symbol       : shows all the symbols.",
-        "    <name>     : shows symbol with specified name.",
-        "    <index>    : shows symbol at specified index",
-        "  text         : shows text segment of functions",
-        "    <name>     : shows text segment for specified fn",
-        "patch          : patches elf to hijack fn calls",
-        "  <name>       : patches specified function",
-        "quit           : returns to terminal.",
+        "help             : shows this.",
+        "show             : shows everything.",
+        "  header         : shows the elf header.",
+        "  section        : shows all the sections.",
+        "    <name>       : shows section with specified name.",
+        "    <index>      : shows section at specified index.",
+        "  symbol         : shows all the symbols.",
+        "    <name>       : shows symbol with specified name.",
+        "    <index>      : shows symbol at specified index",
+        "  text           : shows text segment of functions",
+        "    <name>       : shows text segment for specified fn",
+        "patch            : patches elf to hijack fn calls",
+        "  <name>         : patches specified function",
+        "quit             : returns to terminal.",
         NULL
     };
 
@@ -514,11 +566,15 @@ void elf_menu(const char* filename) {
     static int quit = 0;
     static size_t elf_size = 0;
 
-    elf_header = (Elf64_Ehdr*) elf_load(filename, &elf_size);
+    elf_header = elf_load(filename, &elf_size).buffer;
     if(elf_header == NULL) {
+        elfpv_buffer_error err = elfpv_get_error();
+        elfpv_print_buffer_error();
         printf("Unable to open file.\n");
         return;
     }
+
+    elf_file_size = elf_size;
 
     printf("type 'quit' to exit, or 'help' for commands.\n");
     while(quit == 0) {
@@ -579,12 +635,9 @@ void elf_menu(const char* filename) {
 
         if(strcmp(command_buffer, "patch") == 0) {
             char* arg1 = strtok(NULL, " ");
-            if(arg1 == NULL) {
-                elf_patch_all_symbols(elf_header, elf_size);
-                continue;
-            }
-
-            elf_patch_symbol_by_name(elf_header, arg1, elf_size);
+            (arg1 == NULL)
+                ? elf_patch_all_symbols(elf_header, elf_size)
+                : elf_patch_symbol_by_name(elf_header, arg1, elf_size);
             continue;
         }
 
@@ -603,11 +656,14 @@ void elf_cli_menu(const char* filename, char* cli) {
     static int quit = 0;
     static size_t elf_size = 0;
 
-    elf_header = (Elf64_Ehdr*) elf_load(filename, &elf_size);
+    elf_header = elf_load(filename, &elf_size).buffer;
     if(elf_header == NULL) {
         printf("Unable to open file.\n");
         return;
     }
+
+    print_u64(elf_size);
+    elf_file_size = elf_size;
 
     switch(cli[0]) {
         case 'h':

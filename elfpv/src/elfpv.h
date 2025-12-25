@@ -3,6 +3,7 @@
 */
 
 #pragma once
+#include "elfpv_buffer.h"
 #include <elf.h>
 #include <stddef.h>
 
@@ -14,7 +15,8 @@ typedef struct {
     Elf64_Sym symbol;
 } elf_function_text;
 
-char* elf_load(const char* path, size_t* not_null_size);
+elfpv_buffer elf_load(const char* path, size_t* not_null_size);
 void elf_menu(const char* filename);
 void elf_cli_menu(const char* filename, char* cli);
 void elf_free(char* buffer);
+void elf_set_symbol_name(const char* hijack, const char* hook);

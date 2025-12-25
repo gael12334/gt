@@ -97,6 +97,3 @@ void _gt_set_hook(_gt_pntr hook);
 #define GT_ATLEAST _gt_cond_greq // >=
 #define GT_AT_MOST _gt_cond_lreq // <=
 
-#ifndef GT_TEST_ENABLED
-#define gt_mockable __attribute__((weak))
-#endif

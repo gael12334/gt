@@ -13,31 +13,22 @@
  * https://www.cs.uaf.edu/2016/fall/cs301/lecture/09_28_machinecode.html
  * https://simplifycpp.org/?id=a0740
  * https://en.wikipedia.org/wiki/ModR/M
- *
- *
- * 48 8d 1d 80 2e 00 00 4c 8d 25 ea ff ff ff 49 3b dc 0f 84 1b 00 00 00 48 8d 1d 71 2e 00 00 48 c7 c0 00 00 00 00 ff d3
- *
- * 48 8d 1d 71 2e 00 00 48 c7 c0 00 00 00 00 ff d3
- *
- * 90 48 8b 05 83 2e 00 00 4c 8b 25 ed ff ff ff 49 3b c4 0f 84 1a 00 00 00 55 48 89 e5 48 8b 1d 70 2e 00 00 48 c7 c0 00 00 00 00 ff d3 5d c3
- *
- * f3 0f 1e fa || 90 48 8b 05 83 2e 00 00 4c 8b 25 ed ff ff ff 49 3b c4 0f 84 1a 00 00 00 55 48 89 e5 48 8b 1d 70 2e 00 00 48 c7 c0 00 00 00 00 ff d3 5d c3
  */
 
 #include "elfpv.h"
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-    if(argc < 2) {
-        printf("Path of ELF file required.\n");
+    if(argc < 4) {
+        puts("Usage: elfpv <elf> <hijack> <hook> [cli opts]");
         return 0;
     }
 
-    if(argc > 2) {
-        elf_cli_menu(argv[1], argv[2]);
-        return 0;
-    }
+    printf("%s %s %s\n", argv[1], argv[2], argv[3]);
 
-    elf_menu(argv[1]);
+    elf_set_symbol_name(argv[2], argv[3]);
+    (argc > 4)
+        ? elf_cli_menu(argv[1], argv[4])
+        : elf_menu(argv[1]);
     return 0;
 }
