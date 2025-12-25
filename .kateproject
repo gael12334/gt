@@ -1,0 +1,3 @@
+{
+  "name": "Kate", "files": [ { "directory": "kate", "filters": ["*.cpp", "*.c", "*.h", "*.sh"], "recursive": 1 } ]
+}
