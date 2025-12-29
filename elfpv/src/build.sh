@@ -1,5 +1,5 @@
 #
-# Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
+# Copyright (c) 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 #
 
 function assert_success() {
@@ -15,10 +15,10 @@ fi
 
 echo "elfpv ........ compiling"
 
-gcc -o elfpv.elf elfpv.c elfpv_main.c elfpv_buffer.c -ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib
+gcc -o elfpv.elf $(find . -name "*.c" -print) -ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib
 assert_success $?
 
-gcc -o elfpv.o -r elfpv.c elfpv_buffer.c -ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib
+gcc -o elfpv.o -r $(find . -name "*_*.c" -print) -ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib
 assert_success $?
 
 version=$(cat version.mv)
@@ -30,7 +30,10 @@ assert_success $?
 mv elfpv.o "../out/elfpv${version}.o"
 assert_success $?
 
-cp elfpv.h "../out/elfpv${version}.h"
+cp elfpv_lib.h "../out/elfpv_lib${version}.h"
+assert_success $?
+
+cp elfpv_utils.h "../out/elfpv_utils${version}.h"
 assert_success $?
 
 cp version.mv "../out/elfpv${version}.mv"
