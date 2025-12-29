@@ -112,6 +112,8 @@ int elfpv_get_sym_wname(Elf64_Shdr* sym_sh, const char* name, Elf64_Sym** sym_re
 
 int elfpv_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, int64_t* index);
 
+int elfpv_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref);
+
 int elfpv_get_readonly_sym_bytes(Elf64_Sym* sym, elfpv_constbytebuffer* const buf_ref, size_t* size);
 
 int elfpv_set_sym_bytes(Elf64_Sym* sym, size_t offset, elfpv_bytebuffer buf, size_t size);

@@ -83,6 +83,7 @@ int elfpv_unload_elf(void)
     }
 
     free(elfpv.data);
+    elfpv.data = NULL;
     strcpy(elfpv.path, "");
     elfpv.size = 0;
     return elfpv_stack_error(ELFPV_OK);
@@ -463,7 +464,7 @@ int elfpv_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, i
     return elfpv_stack_error(ELFPV_OK);
 }
 
-static int elfpv_get_writable_sym_bytes(Elf64_Sym* sym, elfpv_bytebuffer* buf_ref, size_t* size)
+int elfpv_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref)
 {
     int result0 = elfpv_sym_type(sym, STT_FUNC);
     int result1 = elfpv_sym_type(sym, STT_OBJECT);
@@ -496,6 +497,14 @@ static int elfpv_get_writable_sym_bytes(Elf64_Sym* sym, elfpv_bytebuffer* buf_re
         offset = sym->st_value + section->sh_offset;
     }
 
+    *offset_ref = offset;
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+static int elfpv_get_writable_sym_bytes(Elf64_Sym* sym, elfpv_bytebuffer* buf_ref, size_t* size)
+{
+    size_t offset;
+    elfpv_check(elfpv_get_sym_offset(sym, &offset));
     elfpv_check(elfpv_offset(offset, sym->st_size, (void**)buf_ref));
     *size = sym->st_size;
     printf("%zX\n", offset);

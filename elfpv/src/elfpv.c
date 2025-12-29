@@ -401,6 +401,45 @@ int patch_obj_command(int argc, char** args)
 
 #endif
 
+#if 1 // offsetof
+
+int offsetof_sym_wtype_command(const char* name)
+{
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    Elf64_Sym* sym;
+    elfpv_check(elfpv_get_sym_wname(sym_sh, name, &sym));
+
+    size_t offset;
+    elfpv_check(elfpv_get_sym_offset(sym, &offset));
+
+    printf("offset of %s is %zu (0x%zX)\n", name, offset, offset);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int offsetof_func_command(int argc, char** args)
+{
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(offsetof_sym_wtype_command(args[0]));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int offsetof_obj_command(int argc, char** args)
+{
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(offsetof_sym_wtype_command(args[0]));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+#endif
+
 #if 1 // commands
 int load_command(int argc, char** args)
 {
@@ -504,6 +543,17 @@ int quit_command(int argc, char** args)
     return elfpv_stack_error(ELFPV_QUIT);
 }
 
+int offsetof_command(int argc, char** args)
+{
+    static elfpv_cmdent cmds0[] = {
+        { "func", offsetof_func_command }, // func <name>
+        { "obj", offsetof_obj_command }, // obj <name>
+    };
+
+    int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
+    return elfpv_stack_error(result);
+}
+
 int get_error_command(int argc, char** args)
 {
     elfpv_print_error_trace();
@@ -523,7 +573,9 @@ int elfpv_cli(void)
         { "find", find_command },
         { "print", print_command },
         { "count", count_command },
+        { "offset-of", offsetof_command },
         { "get-error", get_error_command },
+        { "exit", quit_command }
     };
 
     const int input_size = 255;
@@ -537,13 +589,17 @@ int elfpv_cli(void)
     while (result != ELFPV_QUIT) {
         printf("> ");
         char* buf = fgets(input, input_size, stdin);
-        fputc('\n', stdout);
+        putc('\n', stdout);
         elfpv_tokenize(buf, tokens_size, tokens, &argc);
         elfpv_reset_error_trace();
         result = elfpv_execute(argc, tokens, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
-        printf("\nresult %i\n\n", result);
+        putc('\n', stdout);
+        if (result > 1) {
+            printf("result %i\n\n", result);
+        }
     }
 
+    elfpv_unload_elf();
     return 0;
 }
 
