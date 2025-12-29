@@ -5,6 +5,7 @@
 #pragma once
 #include <ctype.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef int (*elfpv_command)(int, char**);
 
@@ -20,3 +21,5 @@ int elfpv_execute(int argc, char** argv, elfpv_cmdent* list, size_t size);
 int elfpv_print_cmdent_list(elfpv_cmdent* list, size_t size);
 
 int elfpv_text_isnum(const char* text, long* number);
+
+int elfpv_hexstr_tobyte(const char* text, uint8_t* byte_ref);

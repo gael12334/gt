@@ -5,6 +5,7 @@
 #include "elfpv_utils.h"
 #include "elfpv_lib.h"
 #include <ctype.h>
+#include <stdio.h>
 
 int elfpv_tokenize(char* text, size_t max_tok, char** tokens, int* tok_num)
 {
@@ -27,7 +28,14 @@ int elfpv_tokenize(char* text, size_t max_tok, char** tokens, int* tok_num)
 
 int elfpv_execute(int argc, char** argv, elfpv_cmdent* list, size_t size)
 {
-    if (!argc || !argv || !list) {
+    if (argc == 0) {
+        elfpv_print_cmdent_list(list, size);
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+    if (!argv) {
+        return elfpv_stack_error(ELFPV_ERR_NULL);
+    }
+    if (!list) {
         return elfpv_stack_error(ELFPV_ERR_NULL);
     }
 
@@ -72,4 +80,23 @@ int elfpv_print_cmdent_list(elfpv_cmdent* list, size_t size)
     }
 
     return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_hexstr_tobyte(const char* text, uint8_t* byte_ref)
+{
+    if (!text) {
+        return elfpv_stack_error(ELFPV_ERR_NULL);
+    }
+
+    if (!byte_ref) {
+        return elfpv_stack_error(ELFPV_ERR_NULL);
+    }
+
+    uint64_t text_len = strlen(text);
+    if (text_len != 2) {
+        return elfpv_stack_error(ELFPV_ERR_NOT_NUMBER);
+    }
+
+    int result = sscanf(text, "%hhx", byte_ref);
+    return elfpv_stack_error((result == 0) ? ELFPV_ERR_NOT_NUMBER : ELFPV_OK);
 }

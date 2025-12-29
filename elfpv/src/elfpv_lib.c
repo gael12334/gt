@@ -109,10 +109,32 @@ int elfpv_offset(size_t offset, size_t ref_size, void** ref_ref)
     }
 
     if (offset + ref_size > elfpv.size) {
+        printf("%zu + %zu > %zu\n", offset, ref_size, elfpv.size);
         return elfpv_stack_error(ELFPV_ERR_SEGFAULT);
     }
 
     *ref_ref = elfpv.data + offset;
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_get_offset(const void* end, const void* start, size_t* offset_ref)
+{
+    if (!elfpv_elf_loaded()) {
+        return elfpv_stack_error(ELFPV_ERR_UNLOADED);
+    }
+
+    void* absolute_end = elfpv.data + elfpv.size;
+    void* absolute_start = elfpv.data;
+
+    if (end > absolute_end || end < absolute_start) {
+        return elfpv_stack_error(ELFPV_ERR_SEGFAULT);
+    }
+
+    if (start > absolute_end || start < absolute_start) {
+        return elfpv_stack_error(ELFPV_ERR_SEGFAULT);
+    }
+
+    *offset_ref = end - start;
     return elfpv_stack_error(ELFPV_OK);
 }
 
@@ -157,6 +179,24 @@ int elfpv_get_phdr_windex(size_t index, Elf64_Phdr** phdr_ref)
     size_t offset = hdr->e_phoff + hdr->e_phentsize * index;
     elfpv_check(elfpv_offset(offset, sizeof(**phdr_ref), (void**)phdr_ref));
     return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_get_phdr_wtype(Elf64_Word type, Elf64_Phdr** phdr_ref)
+{
+    Elf64_Ehdr* hdr;
+    elfpv_check(elfpv_get_hdr(&hdr));
+
+    for (size_t i = 0; i < hdr->e_phnum; i++) {
+        Elf64_Phdr* phdr;
+        elfpv_check(elfpv_get_phdr_windex(i, &phdr));
+
+        if (phdr->p_type == type) {
+            *phdr_ref = phdr;
+            return elfpv_stack_error(ELFPV_OK);
+        }
+    }
+
+    return elfpv_stack_error(ELFPV_ERR_NOT_FOUND);
 }
 
 int elfpv_print_phdr(Elf64_Phdr* phdr)
@@ -302,6 +342,12 @@ int elfpv_sym_shdr_type(Elf64_Shdr* sym_sh)
     return elfpv_stack_error((result) ? ELFPV_OK : ELFPV_ERR_TYPE);
 }
 
+int elfpv_sym_type(Elf64_Sym* sym, uint16_t type)
+{
+    int result = (ELF64_ST_TYPE(sym->st_info) == type);
+    return elfpv_stack_error((result) ? ELFPV_OK : ELFPV_ERR_TYPE);
+}
+
 int elfpv_get_sym_strtab_shdr(Elf64_Shdr* sym_sh, Elf64_Shdr** shdr_ref)
 {
     elfpv_check(elfpv_sym_shdr_type(sym_sh));
@@ -324,6 +370,12 @@ int elfpv_get_sym_num(Elf64_Shdr* sym_sh, size_t* num_ref)
 
     size_t sym_num = sym_sh->sh_size / sym_sh->sh_entsize;
     *num_ref = sym_num;
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_get_sym_shdr(Elf64_Shdr** sym_sh)
+{
+    elfpv_check(elfpv_get_shdr_wname(".symtab", sym_sh));
     return elfpv_stack_error(ELFPV_OK);
 }
 
@@ -382,7 +434,7 @@ int elfpv_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, i
 
     size_t sym_num;
     elfpv_check(elfpv_get_sym_num(sym_sh, &sym_num));
-    printf("%li %lu\n", prev_index, sym_num);
+    // printf("%li %lu\n", prev_index, sym_num);
 
     if (prev_index >= 0) {
         size_t u_prev_index = (size_t)prev_index;
@@ -408,6 +460,101 @@ int elfpv_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, i
     }
 
     *index = -1;
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+static int elfpv_get_writable_sym_bytes(Elf64_Sym* sym, elfpv_bytebuffer* buf_ref, size_t* size)
+{
+    int result0 = elfpv_sym_type(sym, STT_FUNC);
+    int result1 = elfpv_sym_type(sym, STT_OBJECT);
+    if (result0 != ELFPV_OK && result1 != ELFPV_OK) {
+        return elfpv_stack_error(ELFPV_ERR_TYPE);
+    }
+
+    Elf64_Ehdr* hdr;
+    elfpv_check(elfpv_get_hdr(&hdr));
+
+    if (hdr->e_type < ET_REL || hdr->e_type > ET_EXEC) {
+        return elfpv_stack_error(ELFPV_ERR_ELF);
+    }
+
+    if (sym->st_shndx == SHN_COMMON) {
+        return elfpv_stack_error(ELFPV_ERR_INDEX);
+    }
+
+    size_t offset;
+
+    if (hdr->e_type == ET_EXEC) {
+        Elf64_Phdr* phdr;
+        elfpv_check(elfpv_get_phdr_wtype(PT_LOAD, &phdr));
+        offset = sym->st_value - phdr->p_vaddr + phdr->p_offset;
+    }
+
+    if (hdr->e_type == ET_REL) {
+        Elf64_Shdr* section;
+        elfpv_check(elfpv_get_shdr_windex(sym->st_shndx, &section));
+        offset = sym->st_value + section->sh_offset;
+    }
+
+    elfpv_check(elfpv_offset(offset, sym->st_size, (void**)buf_ref));
+    *size = sym->st_size;
+    printf("%zX\n", offset);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_get_readonly_sym_bytes(Elf64_Sym* sym, elfpv_constbytebuffer* buf_ref, size_t* size)
+{
+    elfpv_bytebuffer buffer;
+    elfpv_check(elfpv_get_writable_sym_bytes(sym, &buffer, size));
+    *buf_ref = buffer;
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_set_sym_bytes(Elf64_Sym* sym, size_t offset, elfpv_bytebuffer buf, size_t size)
+{
+    size_t buf_len;
+    elfpv_bytebuffer sym_buf;
+    elfpv_check(elfpv_get_writable_sym_bytes(sym, &sym_buf, &buf_len));
+
+    if (size > buf_len - offset) {
+        return elfpv_stack_error(ELFPV_ERR_SEGFAULT);
+    }
+
+    memcpy(sym_buf + offset, buf, size);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int elfpv_print_sym_bytes(Elf64_Sym* func_sym, elfpv_constbytebuffer bytes, size_t size)
+{
+    Elf64_Ehdr* hdr;
+    elfpv_check(elfpv_get_hdr(&hdr));
+
+    size_t offset;
+    elfpv_check(elfpv_get_offset(bytes, hdr, &offset));
+
+    const size_t row_length = 16;
+
+    elfpv_pnewl((void*)offset);
+    elfpv_unewl((size_t)offset);
+    elfpv_pnewl((void*)size);
+    elfpv_unewl((size_t)size);
+
+    uint8_t* b = elfpv.data + offset;
+
+    printf("\n%-12i ", 0);
+    for (size_t i = 0; i < row_length; i++) {
+        printf("%02zX ", i);
+    }
+
+    fputc('\n', stdout);
+
+    for (size_t i = 0; i < size; i++) {
+        (i % row_length == 0)
+            ? printf("\n%-12zX %02hhX ", i, b[i])
+            : printf("%02hhX ", b[i]);
+    }
+
+    fputc('\n', stdout);
     return elfpv_stack_error(ELFPV_OK);
 }
 

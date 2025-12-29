@@ -39,12 +39,6 @@
 #include "elfpv_lib.h"
 #include "elfpv_utils.h"
 
-#if 1 // structs
-struct {
-    elfpv_command* cmds;
-} elfpv = { 0 };
-#endif
-
 #if 1 // get commands
 int get_hdr_command(int argc, char** args)
 {
@@ -54,12 +48,12 @@ int get_hdr_command(int argc, char** args)
 
 int get_phdr_command(int argc, char** args)
 {
-    if (argc < 2) {
+    if (argc < 1) {
         return elfpv_stack_error(ELFPV_ERR_ARGC);
     }
 
     long index;
-    elfpv_check(elfpv_text_isnum(args[1], &index));
+    elfpv_check(elfpv_text_isnum(args[0], &index));
 
     Elf64_Phdr* ph;
     elfpv_check(elfpv_get_phdr_windex(index, &ph));
@@ -69,12 +63,12 @@ int get_phdr_command(int argc, char** args)
 
 int get_shdr_command(int argc, char** args)
 {
-    if (argc < 2) {
+    if (argc < 1) {
         return elfpv_stack_error(ELFPV_ERR_ARGC);
     }
 
     long index;
-    elfpv_check(elfpv_text_isnum(args[1], &index));
+    elfpv_check(elfpv_text_isnum(args[0], &index));
 
     Elf64_Shdr* sh;
     elfpv_check(elfpv_get_shdr_windex(index, &sh));
@@ -84,19 +78,19 @@ int get_shdr_command(int argc, char** args)
 
 int get_sym_command(int argc, char** args)
 {
-    if (argc < 2) {
+    if (argc < 1) {
         return elfpv_stack_error(ELFPV_ERR_ARGC);
     }
 
     long index;
-    elfpv_check(elfpv_text_isnum(args[1], &index));
+    elfpv_check(elfpv_text_isnum(args[0], &index));
 
-    Elf64_Shdr* symtab_sh;
-    elfpv_check(elfpv_get_shdr_wname(".symtab", &symtab_sh));
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
 
     Elf64_Sym* sym;
-    elfpv_check(elfpv_get_sym_windex(symtab_sh, index, &sym));
-    elfpv_check(elfpv_print_sym(symtab_sh, sym));
+    elfpv_check(elfpv_get_sym_windex(sym_sh, index, &sym));
+    elfpv_check(elfpv_print_sym(sym_sh, sym));
     return elfpv_stack_error(ELFPV_OK);
 }
 
@@ -127,15 +121,15 @@ int get_all_str_command(int argc, char** args)
 int get_all_sym_command(int argc, char** args)
 {
     Elf64_Shdr* sym_sh;
-    elfpv_check(elfpv_get_shdr_wname(".symtab", &sym_sh));
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
     elfpv_check(elfpv_print_sym_shdr(sym_sh));
     return elfpv_stack_error(ELFPV_OK);
 }
 
-int get_all_obj_wtype_command(int type)
+int get_all_sym_wtype_command(int type)
 {
     Elf64_Shdr* sym_sh;
-    elfpv_check(elfpv_get_shdr_wname(".symtab", &sym_sh));
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
 
     int64_t index = 0;
     int64_t prev = -1;
@@ -156,39 +150,255 @@ int get_all_obj_wtype_command(int type)
 
 int get_all_obj_command(int argc, char** args)
 {
-    elfpv_check(get_all_obj_wtype_command(STT_OBJECT));
+    elfpv_check(get_all_sym_wtype_command(STT_OBJECT));
     return elfpv_stack_error(ELFPV_OK);
 }
 
 int get_all_func_command(int argc, char** args)
 {
-    elfpv_check(get_all_obj_wtype_command(STT_FUNC));
+    elfpv_check(get_all_sym_wtype_command(STT_FUNC));
     return elfpv_stack_error(ELFPV_OK);
 }
+
 #endif
 
 #if 1 // find commands
 int find_shdr_command(int argc, char** args)
 {
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
 
+    const char* name = args[0];
+    Elf64_Shdr* shdr;
+    elfpv_check(elfpv_get_shdr_wname(name, &shdr));
+    elfpv_check(elfpv_print_shdr(shdr));
     return elfpv_stack_error(ELFPV_ERR_NOT_FOUND);
 }
 
 int find_sym_command(int argc, char** args)
 {
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    const char* name = args[0];
+    Elf64_Sym* sym;
+    elfpv_check(elfpv_get_sym_wname(sym_sh, name, &sym));
+    elfpv_print_sym(sym_sh, sym);
+    return elfpv_stack_error(ELFPV_ERR_NOT_FOUND);
+}
+
+int find_sym_command_wtype_command(int type, const char* name)
+{
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    Elf64_Shdr* symstrtab_sh;
+    elfpv_check(elfpv_get_sym_strtab_shdr(sym_sh, &symstrtab_sh));
+
+    int64_t index = 0;
+    int64_t prev = -1;
+    while (index != -1) {
+        elfpv_check(elfpv_get_sym_wtype(sym_sh, type, prev, &index));
+
+        if (index == -1) {
+            prev = index;
+            continue;
+        }
+
+        Elf64_Sym* sym;
+        elfpv_check(elfpv_get_sym_windex(sym_sh, index, &sym));
+
+        const char* sym_name;
+        elfpv_check(elfpv_get_strtab_shdr_text(symstrtab_sh, sym->st_name, &sym_name));
+
+        if (strcmp(sym_name, name) == 0) {
+            elfpv_check(elfpv_print_sym(sym_sh, sym));
+            return elfpv_stack_error(ELFPV_OK);
+        }
+
+        prev = index;
+    }
 
     return elfpv_stack_error(ELFPV_ERR_NOT_FOUND);
 }
 
 int find_obj_command(int argc, char** args)
 {
-    return elfpv_stack_error(ELFPV_ERR_NOT_FOUND);
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(find_sym_command_wtype_command(STT_OBJECT, args[0]));
+    return elfpv_stack_error(ELFPV_OK);
 }
 
 int find_func_command(int argc, char** args)
 {
-    return elfpv_stack_error(ELFPV_ERR_NOT_FOUND);
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(find_sym_command_wtype_command(STT_FUNC, args[0]));
+    return elfpv_stack_error(ELFPV_OK);
 }
+#endif
+
+#if 1 // print
+int print_wname_command(const char* name)
+{
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    Elf64_Sym* sym;
+    elfpv_check(elfpv_get_sym_wname(sym_sh, name, &sym));
+
+    elfpv_constbytebuffer bytes;
+    size_t size;
+    elfpv_check(elfpv_get_readonly_sym_bytes(sym, &bytes, &size));
+
+    elfpv_check(elfpv_print_sym_bytes(sym, bytes, size));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int print_text_command(int argc, char** args)
+{
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(print_wname_command(args[0]));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int print_obj_command(int argc, char** args)
+{
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(print_wname_command(args[0]));
+    return elfpv_stack_error(ELFPV_OK);
+}
+#endif
+
+#if 1 // count
+int count_shdr_command(int argc, char** args)
+{
+    Elf64_Ehdr* hdr;
+    elfpv_check(elfpv_get_hdr(&hdr));
+    printf("shdr %hu\n", hdr->e_shnum);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int count_sym_command(int argc, char** args)
+{
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    size_t num;
+    elfpv_check(elfpv_get_sym_num(sym_sh, &num));
+
+    printf("sym %zu\n", num);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int count_func_wtype_command(uint16_t type)
+{
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    int64_t prev = -1;
+    int64_t index = 0;
+    size_t count = 0;
+
+    while (index != -1) {
+        elfpv_check(elfpv_get_sym_wtype(sym_sh, type, prev, &index));
+        if (index != -1) {
+            count++;
+        }
+        prev = index;
+    }
+
+    printf("sym %zu\n", count);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int count_func_command(int argc, char** args)
+{
+    elfpv_check(count_func_wtype_command(STT_FUNC));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int count_obj_command(int argc, char** args)
+{
+    elfpv_check(count_func_wtype_command(STT_OBJECT));
+    return elfpv_stack_error(ELFPV_OK);
+}
+#endif
+
+#if 1 // patch
+int patch_sym_wtype_command(uint16_t type, const char* name, long offset, int argc, char** argv)
+{
+    if (offset < 0) {
+        return elfpv_stack_error(ELFPV_ERR_OFFSET);
+    }
+
+    uint8_t* buffer = malloc(argc);
+    if (buffer == NULL) {
+        return elfpv_stack_error(ELFPV_ERR_MALLOC);
+    }
+
+    for (size_t i = 0; i < argc; i++) {
+        int result = elfpv_hexstr_tobyte(argv[i], buffer + i);
+        if (result) {
+            printf("error at byte %zu\n", i);
+            free(buffer);
+            return result;
+        }
+    }
+
+    Elf64_Shdr* sym_sh;
+    elfpv_check(elfpv_get_sym_shdr(&sym_sh));
+
+    Elf64_Sym* sym;
+    elfpv_check(elfpv_get_sym_wname(sym_sh, name, &sym));
+    elfpv_check(elfpv_set_sym_bytes(sym, (size_t)offset, buffer, argc));
+
+    free(buffer);
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int patch_func_command(int argc, char** args)
+{
+    if (argc < 2) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    long offset;
+    elfpv_check(elfpv_text_isnum(args[1], &offset));
+
+    elfpv_check(patch_sym_wtype_command(STT_FUNC, args[0], offset, argc - 1, args + 1));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int patch_obj_command(int argc, char** args)
+{
+    if (argc < 2) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    long offset;
+    elfpv_check(elfpv_text_isnum(args[1], &offset));
+
+    elfpv_check(patch_sym_wtype_command(STT_OBJECT, args[0], offset, argc - 1, args + 1));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
 #endif
 
 #if 1 // commands
@@ -200,6 +410,12 @@ int load_command(int argc, char** args)
     }
 
     elfpv_check(elfpv_load_elf(args[0]));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int unload_command(int argc, char** args)
+{
+    elfpv_check(elfpv_unload_elf());
     return elfpv_stack_error(ELFPV_OK);
 }
 
@@ -223,8 +439,8 @@ int get_all_command(int argc, char** args)
         { "sym", get_all_sym_command }, // sym
         { "str", get_all_str_command }, // str
         { "shstr", get_all_shstr_command }, // shstr
-        { "func", get_all_func_command }, // func <name>
-        { "obj", get_all_obj_command }, // obj <name>
+        { "func", get_all_func_command }, // func
+        { "obj", get_all_obj_command }, // obj
     };
 
     int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
@@ -234,9 +450,34 @@ int get_all_command(int argc, char** args)
 int find_command(int argc, char** args)
 {
     static elfpv_cmdent cmds0[] = {
-        { "shdr", find_shdr_command }, // find shdr <name>
-        { "sym", find_sym_command }, // find sym <name>
+        { "shdr", find_shdr_command }, // shdr <name>
+        { "sym", find_sym_command }, // sym <name>
         { "func", find_func_command }, // func <name>
+        { "obj", find_obj_command }, // obj <name>
+    };
+
+    int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
+    return elfpv_stack_error(result);
+}
+
+int print_command(int argc, char** args)
+{
+    static elfpv_cmdent cmds0[] = {
+        { "func", print_text_command }, // func <name>
+        { "obj", print_obj_command }, // obj <name>
+    };
+
+    int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
+    return elfpv_stack_error(result);
+}
+
+int count_command(int argc, char** args)
+{
+    static elfpv_cmdent cmds0[] = {
+        { "shdr", count_shdr_command }, // shdr
+        { "sym", count_sym_command }, // sym
+        { "func", count_func_command }, // func
+        { "obj", count_obj_command }, // obj
     };
 
     int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
@@ -245,13 +486,13 @@ int find_command(int argc, char** args)
 
 int patch_command(int argc, char** args)
 {
-    return 0;
-}
+    static elfpv_cmdent cmds0[] = {
+        { "func", patch_func_command }, // func <name> <data...>
+        { "obj", patch_obj_command }, // obj <name> <data...>
+    };
 
-int unload_command(int argc, char** args)
-{
-    elfpv_check(elfpv_unload_elf());
-    return elfpv_stack_error(ELFPV_OK);
+    int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
+    return elfpv_stack_error(result);
 }
 
 int quit_command(int argc, char** args)
@@ -280,6 +521,8 @@ int elfpv_cli(void)
         { "unload", unload_command },
         { "quit", quit_command },
         { "find", find_command },
+        { "print", print_command },
+        { "count", count_command },
         { "get-error", get_error_command },
     };
 
@@ -294,10 +537,11 @@ int elfpv_cli(void)
     while (result != ELFPV_QUIT) {
         printf("> ");
         char* buf = fgets(input, input_size, stdin);
+        fputc('\n', stdout);
         elfpv_tokenize(buf, tokens_size, tokens, &argc);
         elfpv_reset_error_trace();
         result = elfpv_execute(argc, tokens, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
-        printf("result %i\n", result);
+        printf("\nresult %i\n\n", result);
     }
 
     return 0;

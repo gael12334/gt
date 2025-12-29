@@ -28,8 +28,8 @@ then
     gcc -o $out_obj $gt_obj $test_src demo.c -O0 -ggdb -static -static-libgcc -fpatchable-function-entry=50 -fpcc-struct-return -Werror -Wreturn-type -I/usr/include -L/usr/lib
     assert_success $?
 
-    ../../pkg/bin/elfpv1.elf $out_obj _gt_hjck _gt_hook p
-    assert_success $?
+    #../../pkg/bin/elfpv1.elf $out_obj _gt_hjck _gt_hook p
+    #assert_success $?
 
     mv out $out_obj
     chmod +x $out_obj

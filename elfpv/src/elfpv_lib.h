@@ -12,6 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef const uint8_t elfpv_constbyte;
+typedef elfpv_constbyte* elfpv_constbytebuffer;
+typedef uint8_t elfpv_byte;
+typedef elfpv_byte* elfpv_bytebuffer;
+
 typedef enum {
     ELFPV_OK,
     ELFPV_QUIT,
@@ -30,6 +35,7 @@ typedef enum {
     ELFPV_ERR_OPTION,
     ELFPV_ERR_TYPE,
     ELFPV_ERR_NULL,
+    ELFPV_ERR_NOT_IMPL,
 } elfpv_error_code;
 
 typedef struct {
@@ -64,6 +70,8 @@ int elfpv_print_elf(void);
 
 int elfpv_offset(size_t offset, size_t ref_size, void** ref_ref);
 
+int elfpv_get_offset(const void* end, const void* start, size_t* offset_ref);
+
 int elfpv_get_hdr(Elf64_Ehdr** hdr_ref);
 
 int elfpv_print_header(void);
@@ -88,7 +96,15 @@ int elfpv_get_strtab_shdr_text(Elf64_Shdr* strtab_sh, size_t index, const char**
 
 int elfpv_print_strtab_shdr_text(Elf64_Shdr* strtab_sh);
 
+int elfpv_sym_shdr_type(Elf64_Shdr* sym_sh);
+
+int elfpv_sym_type(Elf64_Sym* sym, uint16_t type);
+
+int elfpv_get_sym_num(Elf64_Shdr* sym_sh, size_t* num_ref);
+
 int elfpv_get_sym_strtab_shdr(Elf64_Shdr* sym_sh, Elf64_Shdr** shdr_ref);
+
+int elfpv_get_sym_shdr(Elf64_Shdr** shdr_ref);
 
 int elfpv_get_sym_windex(Elf64_Shdr* sym_sh, size_t index, Elf64_Sym** sym_ref);
 
@@ -96,7 +112,13 @@ int elfpv_get_sym_wname(Elf64_Shdr* sym_sh, const char* name, Elf64_Sym** sym_re
 
 int elfpv_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, int64_t* index);
 
+int elfpv_get_readonly_sym_bytes(Elf64_Sym* sym, elfpv_constbytebuffer* const buf_ref, size_t* size);
+
+int elfpv_set_sym_bytes(Elf64_Sym* sym, size_t offset, elfpv_bytebuffer buf, size_t size);
+
 int elfpv_print_sym(Elf64_Shdr* sym_sh, Elf64_Sym* sym);
+
+int elfpv_print_sym_bytes(Elf64_Sym* sym, elfpv_constbytebuffer bytes, size_t size);
 
 int elfpv_print_sym_shdr(Elf64_Shdr* sym_sh);
 
@@ -113,7 +135,7 @@ int elfpv_print_sym_shdr(Elf64_Shdr* sym_sh);
 #define elfpv_newl(x, ...) printf(x "\n", __VA_ARGS__)
 
 #define elfpv_gnewl(format, x, z, d) \
-    printf("%-30s %-12zu " format ";\n", x, z, d)
+    printf("%-30s %-12zu " format "\n", x, z, d)
 
 #define elfpv_unewl(x) _Generic((x),                             \
     uint8_t: elfpv_gnewl("%-12hhu", #x, sizeof(x), (uint8_t)x),  \
