@@ -1,26 +1,14 @@
 #
-# Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
+# Copyright (c) 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 #
 
-function assert_success() {
-    if [ $1 -ne 0 ];
-    then
-        exit
-    fi
-}
-
-function new_dir() {
-    local name=$1
-    if [ ! -d $name ];
-    then
-        mkdir $name
-    fi
-}
+source "./build/assert.sh"
+source "./build/dir.sh"
 
 function get_filename() {
     local path=$1
     readarray -d "/" -t arr <<< $path
-    assert_success $?
+    assert $?
     local len=${#arr[*]}
     echo ${arr[len-1]}
 }
@@ -32,13 +20,13 @@ function copy_artifacts() {
     local name=""
 
     readarray -d "\0" -t files <<< $(find $prj/out -name $ext -print)
-    assert_success $?
+    assert $?
 
     for i in $files;
     do
         name=$(get_filename $i)
         cp $i "pkg/$dir/$name"
-        assert_success $?
+        assert $?
     done
     unset i
     unset files
@@ -48,13 +36,13 @@ function write_version_list() {
     local prj=$1
     local ext="*.mv"
     readarray -d "\0" -t files <<< $(find $prj/src -name $ext -print)
-    assert_success $?
+    assert $?
 
     for i in $files;
     do
         version=$(cat $i)
-        echo "$prj $version" >> pkg/list.mv
-        assert_success $?
+        echo $prj $version >> pkg/list.mv
+        assert $?
     done
     unset i
     unset files
@@ -63,11 +51,11 @@ function write_version_list() {
 function build_projects() {
     local proj=$1
     cd $proj
-    assert_success $?
+    assert $?
     cd src
-    assert_success $?
+    assert $?
     ./build.sh
-    assert_success $?
+    assert $?
     cd ..
     cd ..
 }
@@ -75,34 +63,35 @@ function build_projects() {
 if [ "$1" = "clean" ];
 then
     projects=$(cat projects)
-    assert_success $?
+    assert $?
 
-    rm -rf pkg
-    assert_success $?
+    deldir pkg
+    assert $?
 
     for p in $projects;
     do
-        rm -rf "$p/out"
-        assert_success $?
+        #rm -rf "$p/out"
+        deldir $p/out
+        assert $?
     done
     unset p
 fi
 
-new_dir pkg
-new_dir pkg/lib
-new_dir pkg/bin
-new_dir pkg/include
+newdir pkg
+newdir pkg/lib
+newdir pkg/bin
+newdir pkg/include
 
 projects=$(cat projects)
-assert_success $?
+assert $?
 
 for p in $projects;
 do
     build_projects "$p"
 done
 
-> pkg/list.mv
-assert_success $?
+rm pkg/list.mv
+assert $?
 
 for p in $projects;
 do

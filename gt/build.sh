@@ -1,6 +1,13 @@
 #
-# Copyright © 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
+# Copyright (c) 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 #
+
+function import_dependencies() {
+    local name
+    local version
+
+
+}
 
 function assert_success() {
     if [ $1 -ne 0 ];
@@ -15,7 +22,7 @@ fi
 
 echo "gt ........... compiling"
 
-gcc -o gt.o -c gt.c -ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib
+gcc -o gt.o -c $(find . -name "*.c" -print) -ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib
 assert_success $?
 
 version=$(cat version.mv)

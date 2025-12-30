@@ -550,8 +550,18 @@ int offsetof_command(int argc, char** args)
         { "obj", offsetof_obj_command }, // obj <name>
     };
 
-    int result = elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0]));
-    return elfpv_stack_error(result);
+    elfpv_check(elfpv_execute(argc, args, cmds0, sizeof(cmds0) / sizeof(cmds0[0])));
+    return elfpv_stack_error(ELFPV_OK);
+}
+
+int save_command(int argc, char** args)
+{
+    if (argc < 1) {
+        return elfpv_stack_error(ELFPV_ERR_ARGC);
+    }
+
+    elfpv_check(elfpv_save_elf(args[0]));
+    return elfpv_stack_error(ELFPV_OK);
 }
 
 int get_error_command(int argc, char** args)
@@ -575,6 +585,7 @@ int elfpv_cli(void)
         { "count", count_command },
         { "offset-of", offsetof_command },
         { "get-error", get_error_command },
+        { "save", save_command },
         { "exit", quit_command }
     };
 
