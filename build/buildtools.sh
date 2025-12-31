@@ -5,6 +5,10 @@
 declare FALSE=0
 declare TRUE=1
 
+# ---------------------------
+# Utilities
+# ---------------------------
+
 function assert_ret() {
     if [ $1 -ne 0 ];
     then
@@ -70,19 +74,55 @@ function make_path() {
     done
 }
 
-function getsrc_objname() {
+function last_mod_timestamp_file() {
+    local output_directory=$1
+    local selected_file=$2
+    echo "${output_directory}/${selected_file}.txt"
+}
+
+function file_changed() {
+    # parameters
+    local last_mod_file=$1
+    local selected_file=$2
+
+    # if last modification is unsaved,
+    # then assumes there was a change.
+    if [ ! -f $last_mod_file ];
+    then
+        echo $TRUE
+        return
+    fi
+
+    # reads saved timestamp
+    local saved=$(cat $last_mod_file)
+    assert_ret $?
+
+    # reads current source modification timestamp
+    local source=$(date -r $selected_file "+%s")
+    assert_ret $?
+
+    # if timestamp saved equals source,
+    # then source code unchanged.
+    if [ $source -eq $saved ];
+    then
+        echo $FALSE
+        return
+    fi
+
+    echo $TRUE
+}
+
+# ---------------------------
+# Build functions
+# ---------------------------
+
+function build_get_output_filepath() {
     local dst_path=$1
     local src_file=$2
     echo "${dst_path}/${src_file}.o"
 }
 
-function getsrc_lastmodname() {
-    local dst_path=$1
-    local src_file=$2
-    echo "${dst_path}/${src_file}.txt"
-}
-
-function make_elfobj() {
+function build_make_elfobj() {
     # parameters
     local src_file=$1
     local dst_file=$2
@@ -99,62 +139,33 @@ function make_elfobj() {
     assert_ret $?
 }
 
-function src_changed() {
-    # parameters
-    local savedlstmod=$1
-    local source_file=$2
-
-    # if last modification is unsaved,
-    # then assumes source code changed.
-    if [ ! -f $savedlstmod ];
-    then
-        echo $TRUE
-        return
-    fi
-
-    # reads saved timestamp from previous build
-    local saved=$(cat $savedlstmod)
-    assert_ret $?
-
-    # reads current source modification timestamp
-    local source=$(date -r $source_file "+%s")
-    assert_ret $?
-
-    # if timestamp saved equals source,
-    # then source code unchanged.
-    if [ $source -eq $saved ];
-    then
-        echo $FALSE
-        return
-    fi
-
-    echo $TRUE
-}
-
-RESULT_check_changes=0
-function check_changes() {
+RESULT_build_check_changes=0
+function build_check_changes() {
     # parameters
     local dst_path=$1
     local src_file=$2
 
-    # object file path and file of
-    # last modification of source file
-    local dst_file=$(getsrc_objname $dst_path $src_file)
-    local last_mod=$(getsrc_lastmodname $dst_path $src_file)
+    # object file path
+    local dst_file=$(build_get_output_filepath $dst_path $src_file)
+
+    # last modification file path
+    local last_mod=$(last_mod_timestamp_file $dst_path $src_file)
 
     # asserts that source file exists
     assert_file $src_file
 
     # compiles source to elf object if
     # source files have changed.
-    changed=$(src_changed $last_mod $src_file)
+    changed=$(file_changed $last_mod $src_file)
     if [ $changed -eq $TRUE ];
     then
-        make_elfobj $src_file $dst_file
+        build_make_elfobj $src_file $dst_file
         echo $(date -r $src_file "+%s") > $last_mod
+        assert_ret $?
         echo "[ Compiled ] $src_file"
         echo "             :... $dst_file"
-        RESULT_check_changes+=1
+
+        RESULT_build_check_changes+=1
     else
         echo "[Up to date] $src_file"
         echo "             :... No object file generated."
@@ -167,20 +178,22 @@ function build() {
     local source_path=$3
     local source_file=$4
     local gcc_argumnt=$5
+    local lnk_argumnt=$5
 
-    RESULT_check_changes=0
+    RESULT_build_check_changes=0
     objfiles_arr=()
 
     # compiles every source file into object files
     for file in $source_file
     do
-        check_changes $output_path $file
-        objfiles_arr+=($(getsrc_objname $output_path $file))
+        echo $file
+        build_check_changes $output_path $file
+        objfiles_arr+=($(build_get_output_filepath $output_path $file))
     done
 
     # if result = 0 and output file exists,
     # project already up to date.
-    if [ $RESULT_check_changes -eq 0 ];
+    if [ $RESULT_build_check_changes -eq 0 ];
     then
         if [ -f $output_file ];
         then
@@ -191,14 +204,109 @@ function build() {
     fi
 
     # clean up
-    RESULT_check_changes=0
+    RESULT_build_check_changes=0
 
     # compiles the output file
     gcc -o $output_file ${objfiles_arr[*]} $gcc_argumnt
     assert_ret $?
 
     #
-    echo "[ Compiled ] gcc -o $output_file ${objfiles_arr[*]} $gcc_argumnt"
+    echo "[ Compiled ] gcc -o $output_file ${objfiles_arr[*]} $lnk_argumnt $gcc_argumnt"
     echo "             :... $output_file"
-    return
+}
+
+# ---------------------------
+# Publish functions
+# ---------------------------
+
+function publish_destpath() {
+    local dir=$1
+    local name=$2
+    local vers=$3
+
+    echo "$dir/${name}_${vers}"
+}
+
+RESULT_publish_check_changes=0
+function publish_check_changes() {
+    # parameters
+    local dst_path=$1
+    local src_file=$2
+
+    # object file path
+    local dst_file=$(build_get_output_filepath $dst_path $src_file)
+
+    # last modification file path
+    local last_mod=$(last_mod_timestamp_file $dst_path $src_file)
+
+    # asserts that source file exists
+    assert_file $src_file
+
+    # compiles source to elf object if
+    # source files have changed.
+    changed=$(file_changed $last_mod $src_file)
+
+    if [ $changed -eq $TRUE ];
+    then
+        # make sure path exists before copying
+        make_path $dst_file
+
+        # update last modification
+        echo $(date -r $src_file "+%s") > $last_mod
+        assert_ret $?
+
+        # copy files
+        cp $src_file $dst_file
+        assert_ret $?
+
+        echo "[ Publised ] $src_file"
+        echo "             :... $dst_file"
+    else
+        echo "[Up to date] $src_file"
+        echo "             :... File not copied."
+    fi
+}
+
+function publish() {
+    # parameters
+    local proj_name=$1
+    local proj_vers=$2
+    local pblsh_dir=$3
+    local hdr_files=$4
+    local lib_files=$5
+    local bin_files=$6
+
+    RESULT_publish_check_changes=0
+    dest_path=$(publish_destpath $pblsh_dir $proj_name $proj_vers)
+    echo $dest_path
+
+    for hdr in $hdr_files
+    do
+        publish_check_changes $dest_path $hdr
+    done
+
+    for lib in $lib_files
+    do
+        publish_check_changes $dest_path $lib
+    done
+
+    for bin in $bin_files
+    do
+        publish_check_changes $dest_path $bin
+    done
+
+    # if result = 0 and output file exists,
+    # project already up to date.
+    if [ $RESULT_publish_check_changes -eq 0 ];
+    then
+        echo "[Up to date] $output_file"
+        echo "             :... No output generated."
+        return
+    fi
+
+    # clean up
+    RESULT_build_check_changes=0
+
+    echo "[ Publised ] $proj_name"
+    echo "             :... $dest_path"
 }
