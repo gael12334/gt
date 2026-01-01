@@ -112,6 +112,17 @@ function file_changed() {
     echo $TRUE
 }
 
+function named_list_str() {
+    local name=$1
+    local list=$2
+
+    readarray -d " " -t arr <<< $list
+    assert_ret $?
+
+    local len=${#arr[@]}
+    echo "$name $len ${arr[*]}"
+}
+
 # ---------------------------
 # Build functions
 # ---------------------------
@@ -248,17 +259,6 @@ function publish_check_changes() {
 
     if [ $changed -eq $TRUE ];
     then
-        # make sure path exists before copying
-        make_path $dst_file
-
-        # update last modification
-        echo $(date -r $src_file "+%s") > $last_mod
-        assert_ret $?
-
-        # copy files
-        cp $src_file $dst_file
-        assert_ret $?
-
         echo "[ Publised ] $src_file"
         echo "             :... $dst_file"
     else
@@ -275,6 +275,9 @@ function publish() {
     local hdr_files=$4
     local lib_files=$5
     local bin_files=$6
+    local headr_dir=$7
+    local libry_dir=$8
+    local binry_dir=$9
 
     RESULT_publish_check_changes=0
     dest_path=$(publish_destpath $pblsh_dir $proj_name $proj_vers)

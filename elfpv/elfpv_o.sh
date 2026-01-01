@@ -20,7 +20,7 @@ SYS_OUTP_FILE="${SYS_OUTP_PATH}/${SYS_PROJ_NAME}_${SYS_PROJ_VERS}"
 # ----------------------------------
 
 # ------------ prebuild ------------
-# insert user code here
+#
 
 # ----------------------------------
 
@@ -52,20 +52,20 @@ build "$SYS_OUTP_PATH" \
 # -----------------------------------
 
 # ------------ postbuild ------------
-# insert user code here
+#
 
-# ----------------------------------
+# -----------------------------------
 
 # ------------ publish --------------
-# directories to find files
+# directories to find files (optional)
 PBLSH_HDR_PATH=("$BUILD_SRC_PATH")
-PBLSH_LIB_PATH=("$SYS_OUTP_PATH/$BUILD_SRC_PATH")
-PBLSH_BIN_PATH=("")
+PBLSH_LIB_PATH=("$SYS_OUTP_PATH")
+PBLSH_BIN_PATH=()
 
 # find files in directories (for publishing)
-PBLSH_HDR_FILE=$(find "${PBLSH_HDR_PATH[*]}" -name "elfpv_*.h" -print)
-PBLSH_LIB_FILE=$(find "${PBLSH_LIB_PATH[*]}" -name "elfpv_*.o" -print)
-PBLSH_BIN_FILE=$()
+PBLSH_HDR_FILE=($(find "${PBLSH_HDR_PATH[*]}" -name "elfpv_*.h" -print))
+PBLSH_LIB_FILE=("$BUILD_OUT_FILE")
+PBLSH_BIN_FILE=("")
 
 # -----------------------------------
 echo "$SYS_PROJ_NAME"
@@ -75,10 +75,16 @@ echo "${PBLSH_HDR_FILE[*]}"
 echo "${PBLSH_LIB_FILE[*]}"
 echo "${PBLSH_BIN_FILE[*]}"
 
-publish "$SYS_PROJ_NAME" \
-        "$SYS_PROJ_VERS" \
-        "$SYS_PROJ_PBSH" \
-        "${PBLSH_HDR_FILE[*]}" \
-        "${PBLSH_LIB_FILE[*]}" \
-        "${PBLSH_BIN_FILE[*]}"
+RES=$(named_list_str "abc" "${PBLSH_HDR_FILE[*]}")
+RES2=$(named_list_str "abc" "${PBLSH_HDR_FILE[*]}")
+
+#publish "$SYS_PROJ_NAME" \
+#        "$SYS_PROJ_VERS" \
+#        "$SYS_PROJ_PBSH" \
+#        "${PBLSH_HDR_FILE[*]}" \
+#        "${PBLSH_LIB_FILE[*]}" \
+#        "${PBLSH_BIN_FILE[*]}" \
+#        "${PBLSH_HDR_PATH[*]}" \
+#        "${PBLSH_LIB_PATH[*]}" \
+#        "${PBLSH_BIN_PATH[*]}"
 # -----------------------------------
