@@ -2,7 +2,7 @@
     Copyright (c) 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
-#include "gt.h"
+#include "lib.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
