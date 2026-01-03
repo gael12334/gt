@@ -2,218 +2,249 @@
 # Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 #
 
-# ---------------------
-# Assertion
-function assert() {
-    if [ $1 -ne 0 ];
-    then exit;
-    fi
+function print_centered {
+    local text=$1
+    # ----
+    local text_length=${#text};
+    local bar_width=43;
+    local diff=$(($bar_width - $text_length))
+    local start_index=$(($diff / 2));
+
+    for i in $(seq 1 $start_index);
+    do printf "=";
+    done;
+    printf " $text ";
+    for i in $(seq $(($text_length + $start_index + 2)) $bar_width);
+    do printf "=";
+    done;
+    printf "\n"
 }
 
-# Creates directories from a path string
-function create_path() {
-    local path=$1
-    readarray -d "/" -t arr <<< $path
-    assert $?
+function build_cache {
+    local argc=$((argc - 1));
+    local argv=(${*:3:$(($#-1))});
+    local cache="cache";
+    local cfg_file="${argv[0]}.cfg";
 
-    i=0
-    p=""
-    len=${#arr[@]}
-    while [ $i -lt $len ]; do
-        p="$p/${arr[$i]}"
-        i=$(expr $i + 1)
-        assert $?
-        if [ $i -ne $len ]; then
-            dir=".$p"
-            if [ ! -d $dir ]; then
-                mkdir $dir
-                assert $?
-            fi
-        fi
-    done
-}
-
-# Removes the output directory and its content.
-function clean_output() {
-    local output=$1
-    local project_name=$2
-    printf "[$project_name]: Removing output directory ($output) \n"
-    rm -rf $output
-    assert $?
-    printf "[$project_name]: :... Compeleted \n"
-}
-
-# Creates a backup of the source code
-function backup_source() {
-    local source=$1
-    local directory=$2
-    local name=$3
-    local archive=$(date '+%Y%m%d-%Hh%Mm%Ss-%s')
-
-    if [ ! -d $directory ]; then
-        mkdir $directory
-        assert $?
-    fi
-    printf "[$name]: Creating backup of the '$source' directory \n"
-    local archive_path="./$directory/$archive.zip"
-    zip "$archive_path" $(find $source -print)
-    assert $?
-    printf "[$name]: :... Completed backup (saved at '$archive_path') \n"
-}
-
-# Check if source file was modified after last object
-# file generated
-function precompile() {
-    local name=$1
-    local object=$2
-    local source=$3
-    local linker_args=$5
-    local gcc_args=$4
-
-    if [ -f $object ]; then
-        src_last_changed=$(date -r $source "+%s")
-        obj_last_changed=$(date -r $object "+%s")
-
-        if [ $src_last_changed -lt $obj_last_changed ]; then
-            printf "[$name]: $source \n"
-            printf "[$name]: :... Up to date \n"
-            return
-        fi
-    fi
-
-    compile "$name" "$object" "$source" "$linker_args" "$gcc_args"
-}
-
-# Compilation
-R_compiled=0
-function compile() {
-    # params
-    local name=$1
-    local output=$2
-    local sources=$3
-    local linker_args=$4
-    local gcc_args=$5
-
-    # command
-    local command="gcc -o $output $sources $linker_args $gcc_args"
-    printf "[$name]: $command\n"
-
-    # execution
-    $($command)
-    if [ $? -eq 0 ]; then
-        printf "[$name]: :... Succeeded\n"
-    else
-        printf "[$name]: :... Failed\n"
+    if [ ! -f "$cfg_file" ];
+    then
+        echo "$cfg_file not found";
         exit 1
-    fi
+    fi;
 
-    R_compiled=$(($R_compiled + 1))
+    local directory_name=$(cat $cfg_file | grep -Eo "SRC\S*=.+")
+    local include_dir=$(cat $cfg_file | grep -Eo "INCLUDE\S*=.+")
+    local lib_dir=$(cat $cfg_file | grep -Eo "LIB\S*=.+")
+    directory_name=$(echo $directory_name | sed -E "s/.*\s*=\s*//")
+    include_dir=$(echo $include_dir | sed -E "s/.*\s*=\s*//")
+    lib_dir=$(echo $lib_dir | sed -E "s/.*\s*=\s*//")
+
+    if [ ! -d "$directory_name" ];
+    then
+        echo "$directory_name not found";
+        exit 1;
+    fi;
+
+    if [ ! -d "$cache" ];
+    then mkdir "$cache";
+    fi;
+
+    echo $(print_centered "caching")
+    local compiled=0;
+    local unchanged=0;
+    local failed=0;
+    local c_files=($(find $directory_name -name "*.c" -printf "%p "));
+    for c_file in ${c_files[@]};
+    do
+        printf "%-33s found\n" $c_file
+        path="$cache";
+        o_file="$cache/${c_file%%.c}.o";
+        directories=(${c_file//"/"/" "});
+
+        for dir in ${directories[@]:0:${#directories[@]}-1};
+        do
+            path="$path/$dir";
+            if [ ! -d "$path" ];
+            then mkdir "$path";
+            fi;
+        done;
+
+        c_file_last_edit=$(date -r $c_file "+%s");
+        o_file_last_edit=0;
+
+        if [ -f "$o_file" ];
+        then o_file_last_edit=$(date -r $o_file "+%s");
+        fi
+
+        if [ $o_file_last_edit -gt $c_file_last_edit ];
+        then
+            unchanged=$(($unchanged+1));
+            printf "%-33s unmodified\n" " ";
+            printf "%-33s ignored\n\n" " ";
+            continue;
+        fi
+
+        args="-ggdb -Werror -Wreturn-type -I$include_dir -L$lib_dir";
+        compiled=$(($compiled+1));
+        printf "%-33s compiling\n" $o_file;
+        gcc -o $o_file -r $c_file $args;
+        gcc_result=$?
+
+        if [ $gcc_result -ne 0 ];
+        then printf "%-33s FAILED\n\n" " ";
+        else printf "%-33s done\n\n" " ";
+        fi;
+
+        if [ $gcc_result -ne 0 ];
+        then failed=$(($failed + 1));
+        fi;
+    done;
+
+    local result_text="$compiled cached, $unchanged ignored";
+    echo $(print_centered "$result_text");
 }
 
-# ---------------------
-#     ENTRY POINT
-# ---------------------
-# project name
-PROJECT_NAME="gt"
-# backup directory
-BACKUP_DIRECTORY="bck"
-# output directory
-OUT_DIRECTORY="out"
-# precompiled object files
-OBJECT_FILES=$()
-# source code directory
-SOURCE_DIRECTORY="src"
-# source code files
-SOURCE_FILES=$(find "$SOURCE_DIRECTORY" -name "*.c" -printf "%p ")
-# GCC arguments for precompiled relocatable object files (.o)
-OBJECTS_GCC_ARGS="-ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib -DPRECOMPILE"
-OBJECTS_GCC_LNKR="-r"
-# GCC arguments for executable file (elf)
-EXECUTABLE_GCC_ARGS="-ggdb -static -static-libgcc -Werror -Wreturn-type -I/usr/include -L/usr/lib -DEXECUTABLE"
-EXECUTABLE_GCC_LNKR=""
-# Path of output files
-LIB_A_PATH="$OUT_DIRECTORY/lib$PROJECT_NAME.a"
-ELF_PATH="$OUT_DIRECTORY/$PROJECT_NAME.elf"
-# toogle to compile project as library
-# (will ignore object files that are executable)
-TOGGLE_LIBRARY=0
+function build_program() {
+    local argc=$((argc - 1));
+    local argv=(${*:3:$(($#-1))});
+    local cfg_file="${argv[0]}.cfg";
 
-# ---------------------
-# checks arguments
-if [[ $# -ge 1 && "$1" == "clean" ]]; then
-    clean_output "$OUT_DIRECTORY" "$PROJECT_NAME"
-    exit 0
-elif [[ $# -ge 1 && "$1" == "backup" ]]; then
-    cp ./build.sh ./src/build-backup.sh
-    printf "#\n# Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>\n#\nmv ./build-backup.sh ../build.sh" > ./src/setup.sh
-    chmod +x ./src/setup.sh
-    backup_source "$SOURCE_DIRECTORY" "$BACKUP_DIRECTORY" "$PROJECT_NAME"
-    rm ./src/build-backup.sh
-    rm ./src/setup.sh
-    exit 0
-elif [[ $# -ge 1 && "$1" == "library" ]]; then
-    TOGGLE_LIBRARY=1
-    printf "[$PROJECT_NAME]: Target \n"
-    printf "[$PROJECT_NAME]: :... Library \n"
-    printf "[$PROJECT_NAME]: ================================== \n"
-elif [[ $# -ge 1 && "$1" == "exec" ]]; then
-    printf "[$PROJECT_NAME]: Target \n"
-    printf "[$PROJECT_NAME]: :... Executable \n"
-    printf "[$PROJECT_NAME]: ================================== \n"
-else
-    printf "arguments:\n"
-    printf "clean     (deletes $OUT_DIRECTORY)\n"
-    printf "backup    (zips $SOURCE_DIRECTORY)\n"
-    printf "library   (creates $LIB_A_PATH)\n"
-    printf "exec      (creates $ELF_PATH)\n"
-    printf "help      (this output)\n"
-    exit 0
-fi
+    if [ ! -f "$cfg_file" ];
+    then
+        echo "$cfg_file not found";
+        exit 1
+    fi;
 
-# ---------------------
+    echo $(print_centered "building");
+    local name=$(cat $cfg_file | grep -Eo "NAME\S*=.+");
+    local directory_name=$(cat $cfg_file | grep -Eo "SRC\S*=.+");
+    local include_dir=$(cat $cfg_file | grep -Eo "INCLUDE\S*=.+");
+    local lib_dir=$(cat $cfg_file | grep -Eo "LIB\S*=.+");
+    local gcc_args=$(cat $cfg_file | grep -Eo "ARGS\S*=.+");
+    local autoback=$(cat $cfg_file | grep -Eo "AUTOBACKUP\S*=.+");
+    name=$(echo $name | sed -E "s/.*\s*=\s*//");
+    directory_name=$(echo $directory_name | sed -E "s/.*\s*=\s*//");
+    include_dir=$(echo $include_dir | sed -E "s/.*\s*=\s*//");
+    lib_dir=$(echo $lib_dir | sed -E "s/.*\s*=\s*//");
+    gcc_args=$(echo $gcc_args | sed -E "s/.*\s*=\s*//");
+    autoback=$(echo $autoback | sed -E "s/.*\s*=\s*//");
 
-# precompiles every .c file into a .o file
-objfile=""
-for file in $SOURCE_FILES; do
-    # path without source dir
-    wosrcdir=${file##$SOURCE_DIRECTORY}
+    local output="output";
+    local cache="cache";
+    local backup="backup";
 
-    # path without extension
-    woext=${wosrcdir%%".c"}
+    if [ ! -d "$output" ];
+    then mkdir "$output";
+    fi;
 
-    # creates the path of the object file
-    objfile="$OUT_DIRECTORY$woext.o"
+    local recompile=1;
+    local o_files=$(find "$cache/$directory_name" -name "*.o" -printf "%p ");
+    local elf_file="$output/$name.elf";
 
-    # Directories of the object file path.
-    objdir=${objfile%%$(basename $objfile)}
-    create_path $objdir
+    if [ -f $elf_file ];
+    then
+        recompile=0
+        printf "%-33s found\n\n" "$elf_file";
+        for o_file in ${o_files[@]};
+        do
+            printf "%-33s found\n" "$o_file";
+            o_file_last_edit=$(date -r $o_file "+%s");
+            elf_file_last_edit=0;
 
-    # Adding the object file path in the list
-    OBJECT_FILES+=($objfile)
+            if [ -f "$elf_file" ];
+            then elf_file_last_edit=$(date -r $elf_file "+%s");
+            fi
 
-    # precompiling relocatable object files
-    precompile "$PROJECT_NAME" "$objfile" "$file" "$OBJECTS_GCC_LNKR" "$OBJECTS_GCC_ARGS"
-done
+            if [ $elf_file_last_edit -lt $o_file_last_edit ];
+            then printf "%-33s changed\n\n" " ";
+            else printf "%-33s unmodified\n\n" " ";
+            fi
 
-# ---------------------
-if [[ $TOGGLE_LIBRARY -eq 1 && (! -f "$LIB_A_PATH" ||  $R_compiled -gt 0) ]]; then
-    libfiles=()
-    echo ${OBJECT_FILES[@]}
-    for objfile in ${OBJECT_FILES[@]}; do
-        elf_entry=$(./gt.elf elf "$objfile" header | grep -Eo "e_entry +[0-9]+")
-        entry_offset=$(echo $elf_entry | grep -Eo "[0-9]+")
-        if [ $entry_offset -eq 0 ]; then
-            libfiles+=($objfile)
+            if [ $elf_file_last_edit -lt $o_file_last_edit ];
+            then recompile=1;
+            fi
+        done;
+    fi;
+
+    if [ $recompile -eq 1 ];
+    then
+        printf "%-33s compiling\n" $elf_file;
+        gcc -o $elf_file ${o_files[@]} $gcc_args;
+        if [ $? -ne 0 ];
+        then printf "%-33s FAILED\n\n" " ";
+        else printf "%-33s done\n\n" " ";
+        fi;
+    else printf "%-33s ignored\n\n" "$elf_file";
+    fi;
+
+    echo $(print_centered "Completed");
+    echo $(print_centered "Auto backup");
+
+    if [ "$autoback" == "enabled" ];
+    then
+        dir_last_edit=0;
+        if [ ! -d "$backup" ];
+        then mkdir $backup;
+        else dir_last_edit=$(stat -c %Y $backup);
         fi
-    done
-    ar rcs "$LIB_A_PATH" "$libfiles"
-    assert $?
-    exit 0
-elif [[ ! -f "$ELF_PATH" || $R_compiled -gt 0 ]]; then
-    objfiles=$(echo "${OBJECT_FILES[@]}")
-    compile "$PROJECT_NAME" "$ELF_PATH" "$objfiles" "$LIBRARY_GCC_LNKR" "$LIBRARY_GCC_ARGS"
-    exit 0
-fi
-printf "[$PROJECT_NAME]: ================================== \n"
-printf "[$PROJECT_NAME]: $R_compiled object files generated \n"
-printf "[$PROJECT_NAME]: :... Up to date \n"
+
+        current_time=$(date "+%s");
+        diff=$((3600 - ($current_time - $dir_last_edit)));
+        archive_name="$backup/$(date '+%Y%m%d-%Hh%Mm%Ss-%s').zip";
+
+        if [ $diff -le 0 ];
+        then
+            zip "$archive_name" $(find . -print);
+            if [ $? -eq 0 ];
+            then printf "%-33s generated" "$archive_name"
+            else printf "%-33s failed" "$archive_name"
+            fi
+        else
+            printf "$diff seconds before next backup.\n\n"
+        fi;
+
+    else printf "warning: auto backup is disabled.\n\n";
+    fi;
+    echo $(print_centered "Completed");
+}
+
+function build_backup() {
+    local argc=$((argc - 1));
+    local argv=(${*:3:$(($#-1))});
+    local backup="backup";
+
+    echo $(print_centered " backup ");
+
+    if [ ! -d "$backup" ];
+    then mkdir $backup;
+    fi;
+
+    archive_path="$backup/$(date '+%Y%m%d-%Hh%Mm%Ss-%s').zip";
+    zip "$archive_path" $(find . -print)
+    if [ $? -eq 0 ];
+    then echo $(print_centered "Completed");
+    else echo $(print_centered "Failed");
+    fi;
+}
+
+function main {
+    local argc=$1;
+    local argv=(${*:2:$(($#-1))});
+
+    if [[ $argc -ge 2 && "${argv[0]}" == "cache" ]];
+    then
+        build_cache $argc ${argv[@]};
+        exit 0;
+    elif [[ $argc -ge 2 && "${argv[0]}" == "program" ]];
+    then
+        build_cache $argc ${argv[@]}
+        build_program $argc ${argv[@]}
+        exit 0
+    elif [[ $argc -ge 1 && "${argv[0]}" == "backup" ]];
+    then
+        build_backup $argc ${argv[@]}
+        exit 0
+    fi
+}
+
+main $# $@

@@ -52,9 +52,19 @@ typedef struct {
     uint64_t old;
 } elf_trace;
 
+typedef struct {
+    void* object;
+    uint64_t index;
+    uint64_t done;
+} elf_index_iterator;
+
+int elf_reset_index_iterator(elf_index_iterator* iterator_ref);
+
 int elf_stack_error_struct(elf_error error);
 
 void elf_reset_error_trace(void);
+
+int elf_has_error(void);
 
 void elf_print_error_trace(void);
 
@@ -110,7 +120,7 @@ int elf_get_sym_windex(Elf64_Shdr* sym_sh, size_t index, Elf64_Sym** sym_ref);
 
 int elf_get_sym_wname(Elf64_Shdr* sym_sh, const char* name, Elf64_Sym** sym_ref);
 
-int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, int64_t* index);
+int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, elf_index_iterator* iterator_ref);
 
 int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref);
 

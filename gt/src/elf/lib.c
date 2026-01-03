@@ -13,6 +13,18 @@ static struct {
     size_t size;
 } elfpv = { 0 };
 
+int elf_reset_index_iterator(elf_index_iterator* iterator_ref)
+{
+    if (iterator_ref == NULL) {
+        return elf_stack_error(ELF_ERR_NULL);
+    }
+
+    iterator_ref->object = NULL;
+    iterator_ref->index = 0;
+    iterator_ref->done = 0;
+    return elf_stack_error(ELF_OK);
+}
+
 int elf_stack_error_struct(elf_error error)
 {
     if (elfpv.trace.old) {
@@ -27,6 +39,16 @@ int elf_stack_error_struct(elf_error error)
     }
 
     return error.code;
+}
+
+int elf_has_error(void)
+{
+    for (size_t i = 0; i < elfpv.trace.length; i++) {
+        if (elfpv.trace.trace[i].code != ELF_OK)
+            return 1;
+    }
+
+    return 0;
 }
 
 void elf_reset_error_trace(void)
@@ -426,7 +448,7 @@ int elf_get_sym_wname(Elf64_Shdr* sym_sh, const char* name, Elf64_Sym** sym_ref)
     return elf_stack_error(ELF_ERR_NOT_FOUND);
 }
 
-int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, int64_t* index)
+int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, elf_index_iterator* iterator_ref)
 {
     elf_check(elf_sym_shdr_type(sym_sh));
 
@@ -435,32 +457,25 @@ int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, int64_t prev_index, int
 
     size_t sym_num;
     elf_check(elf_get_sym_num(sym_sh, &sym_num));
-    // printf("%li %lu\n", prev_index, sym_num);
 
-    if (prev_index >= 0) {
-        size_t u_prev_index = (size_t)prev_index;
-        if (u_prev_index > sym_num) {
-            return elf_stack_error(ELF_ERR_INDEX);
-        }
-    }
-
-    if (prev_index < 0) {
-        prev_index = -1;
-    }
-
-    for (int64_t i = prev_index + 1; i < sym_num; i++) {
+    size_t index = (iterator_ref->index) ? iterator_ref->index + 1 : 0;
+    for (int64_t i = index; i < sym_num; i++) {
         size_t offset = sym_sh->sh_offset + i * sym_sh->sh_entsize;
         Elf64_Sym* sym;
+
         elf_check(elf_offset(offset, sym_sh->sh_entsize, (void**)&sym));
 
         uint16_t sym_type = ELF64_ST_TYPE(sym->st_info);
         if (sym_type == type) {
-            *index = i;
+            iterator_ref->object = sym;
+            iterator_ref->index = i;
+            iterator_ref->done = (i == sym_num - 1);
             return elf_stack_error(ELF_OK);
         }
     }
 
-    *index = -1;
+    iterator_ref->object = NULL;
+    iterator_ref->done = 1;
     return elf_stack_error(ELF_OK);
 }
 
@@ -573,7 +588,10 @@ int elf_print_sym(Elf64_Shdr* sym_sh, Elf64_Sym* sym)
     elf_check(elf_get_sym_strtab_shdr(sym_sh, &strtab_sh));
 
     const char* sym_name;
-    elf_check(elf_get_strtab_shdr_text(strtab_sh, sym->st_name, &sym_name));
+    if (elf_get_strtab_shdr_text(strtab_sh, sym->st_name, &sym_name) != ELF_OK) {
+        sym_name = "ERROR";
+    }
+
     size_t name_length = strlen(sym_name);
 
     unsigned sym_type = ELF64_ST_TYPE(sym->st_info);

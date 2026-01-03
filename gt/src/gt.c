@@ -49,7 +49,16 @@ int main(int argc, char** argv)
     const char* execpath = argv[0];
     check(argc < 2);
 
+    size_t sym_num;
+    int64_t prev_index;
+    int64_t current_index;
+    elf_index_iterator it;
     Elf64_Ehdr* header;
+    Elf64_Shdr* symtabsh;
+    Elf64_Shdr* strsh;
+    Elf64_Sym* sym;
+    const char* name;
+
     int result = 0;
     strswitch(argv[1], "elf")
     {
@@ -58,19 +67,15 @@ int main(int argc, char** argv)
         break;
     case 1: // elf
         check(argc < 4);
+        check(elf_load_elf(argv[2]));
 
-        result = elf_load_elf(argv[2]);
-        check(result);
-
-        strswitch(argv[3], "header")
+        strswitch(argv[3], "header", "funclist", "func")
         {
         case 0: // not found
             check(1);
             break;
         case 1: // header
-            result = elf_get_hdr(&header);
-            check(result);
-
+            check(elf_get_hdr(&header));
             printf("%s %hu\n", "e_type     ", header->e_type);
             printf("%s %hu\n", "e_machine  ", header->e_machine);
             printf("%s %lu\n", "e_entry    ", header->e_entry);
@@ -84,15 +89,52 @@ int main(int argc, char** argv)
             printf("%s %hu\n", "e_shnum    ", header->e_shnum);
             printf("%s %hu\n", "e_shstrndx ", header->e_shstrndx);
             break;
+        case 2: // funclist
+            check(elf_get_sym_shdr(&symtabsh));
+            check(elf_get_sym_strtab_shdr(symtabsh, &strsh));
+            check(elf_reset_index_iterator(&it));
+            do {
+                check(elf_get_sym_wtype(symtabsh, STT_FUNC, &it));
+                sym = it.object;
+                uint8_t sym_visibility = ELF64_ST_VISIBILITY(sym->st_other);
+                if (sym_visibility != STV_HIDDEN) {
+                    check(elf_get_strtab_shdr_text(strsh, sym->st_name, &name));
+                    printf("%s\n", name);
+                }
+            } while (!it.done);
+            break;
+        case 3: // func
+            check(argc < 5);
+            name = argv[4];
+            check(elf_get_sym_shdr(&symtabsh));
+            check(elf_get_sym_strtab_shdr(symtabsh, &strsh));
+            result = elf_get_sym_wname(symtabsh, name, &sym);
+            if (result == ELF_OK) {
+                check(elf_get_strtab_shdr_text(strsh, sym->st_name, &name));
+                printf("%s found\n", name);
+                check(elf_print_sym(symtabsh, sym));
+            } else {
+                printf("%s not found\n", name);
+            }
+            break;
         }
         break;
     }
-
     elf_unload_elf();
     return 0;
 }
 
 /*
+ * while (index != -1) {
+        elfpv_check(elfpv_get_sym_wtype(sym_sh, type, prev, &index));
+        if (index != -1) {
+            count++;
+        }
+        prev = index;
+    }
+ *
+ *
+ *
 e_type      2
 e_machine   62
 e_entry     4200896

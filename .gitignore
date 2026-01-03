@@ -1,3 +1,4 @@
 pkg/
-*/out/
-*/bck/
+*/cache/
+*/output/
+*/backup/
