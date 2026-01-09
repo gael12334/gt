@@ -122,6 +122,13 @@ int elf_print_elf(void)
 
 int elf_save_elf(const char* path)
 {
+    FILE* file = fopen("out", "w");
+    if (file == NULL) {
+        return elf_stack_error(ELF_ERR_NULL);
+    }
+
+    fwrite(elfpv.data, 1, elfpv.size, file);
+    fclose(file);
     return elf_stack_error(ELF_OK);
 }
 
@@ -476,7 +483,7 @@ int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, elf_index_iterator* ite
 
     iterator_ref->object = NULL;
     iterator_ref->done = 1;
-    return elf_stack_error(ELF_OK);
+    return elf_stack_error(ELF_DONE);
 }
 
 int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref)
@@ -522,7 +529,6 @@ static int elf_get_writable_sym_bytes(Elf64_Sym* sym, elf_bytebuffer* buf_ref, s
     elf_check(elf_get_sym_offset(sym, &offset));
     elf_check(elf_offset(offset, sym->st_size, (void**)buf_ref));
     *size = sym->st_size;
-    printf("%zX\n", offset);
     return elf_stack_error(ELF_OK);
 }
 
@@ -540,9 +546,8 @@ int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_bytebuffer buf, size_t 
     elf_bytebuffer sym_buf;
     elf_check(elf_get_writable_sym_bytes(sym, &sym_buf, &buf_len));
 
-    if (size > buf_len - offset) {
-        return elf_stack_error(ELF_ERR_SEGFAULT);
-    }
+    void* addr;
+    elf_check(elf_offset(offset, size, &addr));
 
     memcpy(sym_buf + offset, buf, size);
     return elf_stack_error(ELF_OK);

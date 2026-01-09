@@ -2,7 +2,7 @@
     Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
-#include "../src/gt/lib.h"
+#include "../src/gt.h"
 #include "demo.h"
 
 int called__get_vector_norm = 0;

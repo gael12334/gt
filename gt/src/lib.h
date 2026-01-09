@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
+    Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
 #pragma once
@@ -20,6 +20,7 @@ typedef elf_byte* elf_bytebuffer;
 typedef enum {
     ELF_OK,
     ELF_QUIT,
+    ELF_DONE,
     ELF_ERR_LOADED,
     ELF_ERR_PATH,
     ELF_ERR_MALLOC,
@@ -34,6 +35,7 @@ typedef enum {
     ELF_ERR_DIV_ZERO,
     ELF_ERR_OPTION,
     ELF_ERR_TYPE,
+    ELF_ERR_INVALID_SIZE,
     ELF_ERR_NULL,
     ELF_ERR_NOT_IMPL,
 } elf_error_code;
