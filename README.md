@@ -69,9 +69,19 @@ To patch an executable, run `cli.elf elf <filename> patch <entrypoint name>`. No
 - GCC 
 - GT's `cli.elf` and `gt.o`
 
+### How to build, patch and run
+
+1. Open a terminal, then `cd` into the `gt` directory. 
+2. Run `./build.sh all` to compile everything (including the demo). 
+3. Run `./build.sh test` to patch `demo.elf` and run the generated executable `out`. 
+
 ### What you should exepect
 
 The output of the demo project [gt/demo](gt/demo):
 
 ![](imgs/gt.png)
+
+### Documentation
+
+Coming soon.
 
