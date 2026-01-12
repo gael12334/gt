@@ -2,39 +2,53 @@
     Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
-#include "../src/gt.h"
+#include "../src/gt2.h"
 #include "demo.h"
 
-int called__get_vector_norm = 0;
-number rtvl__get_vector_norm = 0.f;
-number mock__get_vector_norm(vector v)
+GT_STRUCT_OF(normalise_vector)
 {
-    called__get_vector_norm++;
-    return rtvl__get_vector_norm;
-}
+    vector retval;
+    vector provided;
+    int called;
+};
 
-gt_test(normalise_vector)
+vector GT_MOCK_OF(normalise_vector)(vector vector_1)
 {
-    gt_case(zero_norm)
-    {
-        // arrange
-        _gt_set_hjck(normalise_vector);
-        _gt_set_hook(mock__get_vector_norm);
-        vector v = null_vector(VECTOR_TYPE_2D);
-        rtvl__get_vector_norm = 0.f;
-
-        // act
-        vector nv = normalise_vector(v);
-
-        // assert
-        gt_assert_long(called__get_vector_norm, 1, GT_EQUALS_);
-        gt_assert_long(nv.type, VECTOR_TYPE_INV, GT_EQUALS_);
-    }
+    GT_STRUCT_OF(normalise_vector)* data = gt_get_data(normalise_vector);
+    data->provided = vector_1;
+    data->called++;
+    return data->retval;
 }
 
 // entry point
-int gt_test_main(int argc, char** argv)
+int gt_test_main()
 {
-    gt_run(normalise_vector);
+    gt_test_function(normalise_vector)
+    {
+        gt_test_case(null_vector)
+        {
+            // arrange
+            GT_STRUCT_OF(normalise_vector)
+            data = {
+                .called = 0,
+                .retval = (vector) {
+                    .x = 0.f,
+                    .y = 0.f,
+                    .z = 0.f,
+                    .w = 0.f,
+                }
+            };
+
+            gt_set_mock(normalise_vector, &data);
+            vector v = { .type = VECTOR_TYPE_1D };
+
+            // act
+            vector r = normalise_vector(v);
+
+            // assert
+            gt_assert(r.type, GT_MODE_EQUAL, VECTOR_TYPE_3D);
+            gt_assert(r.x, GT_MODE_EQUAL, 0.f);
+        }
+    }
     return 0;
 }

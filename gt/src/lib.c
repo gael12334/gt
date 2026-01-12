@@ -5,6 +5,7 @@
 #include "lib.h"
 #include <elf.h>
 #include <stdint.h>
+#include <time.h>
 
 static struct {
     elf_trace trace;
@@ -12,6 +13,19 @@ static struct {
     uint8_t* data;
     size_t size;
 } elfpv = { 0 };
+
+// static void elf_dump_trace(void)
+// {
+//     char dump_filename[20] = { 0 };
+//     snprintf(dump_filename, sizeof(dump_filename), "%li", elfpv.trace.timestamp);
+//
+//     FILE* dump = fopen(dump_filename, "a+");
+//     elf_print_to_file_error_trace(dump);
+//     fclose(dump);
+//
+//     elfpv.trace.length = 0;
+//     memset(elfpv.trace.trace, 0, sizeof(elfpv.trace.trace));
+// }
 
 int elf_reset_index_iterator(elf_index_iterator* iterator_ref)
 {
@@ -30,12 +44,14 @@ int elf_stack_error_struct(elf_error error)
     if (elfpv.trace.old) {
         elfpv.trace.length = 0;
         elfpv.trace.old = 0;
+        time(&elfpv.trace.timestamp);
     }
 
     if (elfpv.trace.length < ELF_TRACE_SIZE) {
         size_t* i = &elfpv.trace.length;
         elfpv.trace.trace[*i] = error;
         (*i)++;
+        (*i) = (*i) % ELF_TRACE_SIZE;
     }
 
     return error.code;
@@ -56,13 +72,17 @@ void elf_reset_error_trace(void)
     elfpv.trace.old = 1;
 }
 
-void elf_print_error_trace(void)
+void elf_print_to_file_error_trace(FILE* output)
 {
+    if (output == NULL) {
+        return;
+    }
+
     for (size_t i = 0; i < elfpv.trace.length; i++) {
-        printf("%zu: %i\n", i, elfpv.trace.trace[i].code);
-        printf("\tfile: %s\n", elfpv.trace.trace[i].file);
-        printf("\tfunc: %s\n", elfpv.trace.trace[i].func);
-        printf("\tline: %i\n\n", elfpv.trace.trace[i].line);
+        fprintf(output, "%zu: %i\n", i, elfpv.trace.trace[i].code);
+        fprintf(output, "\tfile: %s\n", elfpv.trace.trace[i].file);
+        fprintf(output, "\tfunc: %s\n", elfpv.trace.trace[i].func);
+        fprintf(output, "\tline: %i\n\n", elfpv.trace.trace[i].line);
     }
 }
 
@@ -77,7 +97,7 @@ int elf_load_elf(const char* path)
         return elf_stack_error(ELF_ERR_LOADED);
     }
 
-    FILE* file = fopen(path, "r");
+    FILE* file = fopen(path, "rb");
     if (file == NULL) {
         return elf_stack_error(ELF_ERR_PATH);
     }
@@ -122,7 +142,7 @@ int elf_print_elf(void)
 
 int elf_save_elf(const char* path)
 {
-    FILE* file = fopen("out", "w");
+    FILE* file = fopen("out", "wb");
     if (file == NULL) {
         return elf_stack_error(ELF_ERR_NULL);
     }
@@ -231,7 +251,22 @@ int elf_get_phdr_wtype(Elf64_Word type, Elf64_Phdr** phdr_ref)
 
 int elf_print_phdr(Elf64_Phdr* phdr)
 {
+    const char* typestr[] = {
+        "PT_NULL",
+        "PT_LOAD",
+        "PT_DYNAMIC",
+        "PT_INTERP",
+        "PT_NOTE",
+        "PT_SHLIB",
+        "PT_PHDR",
+        "PT_TLS",
+    };
+
     elf_newl("%s", "");
+    if (phdr->p_type < PT_NUM) {
+        const char* phdr_p_type = typestr[phdr->p_type];
+        elf_snewl(phdr_p_type, strlen(phdr_p_type));
+    }
     elf_unewl(phdr->p_type);
     elf_unewl(phdr->p_flags);
     elf_unewl(phdr->p_offset);
@@ -319,11 +354,16 @@ int elf_print_shdr(Elf64_Shdr* shdr)
     Elf64_Shdr* shtext_sh;
     elf_check(elf_get_shdr_strtab_shdr(&shtext_sh));
 
+    Elf64_Shdr* first_sh;
+    elf_check(elf_get_shdr_windex(0, &first_sh));
+    size_t shdr_index = (shdr - first_sh);
+
     const char* shtext;
     elf_check(elf_get_strtab_shdr_text(shtext_sh, shdr->sh_name, &shtext));
     size_t shtext_len = strlen(shtext);
 
     elf_newl("%s", "");
+    elf_unewl(shdr_index);
     elf_snewl(shtext, shtext_len);
     elf_unewl(shdr->sh_name);
     elf_unewl(shdr->sh_type);
@@ -497,7 +537,12 @@ int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref)
     Elf64_Ehdr* hdr;
     elf_check(elf_get_hdr(&hdr));
 
-    if (hdr->e_type < ET_REL || hdr->e_type > ET_EXEC) {
+    switch (hdr->e_type) {
+    case ET_REL:
+    case ET_EXEC:
+    case ET_DYN:
+        break;
+    default:
         return elf_stack_error(ELF_ERR_ELF);
     }
 
@@ -507,7 +552,7 @@ int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref)
 
     size_t offset;
 
-    if (hdr->e_type == ET_EXEC) {
+    if (hdr->e_type == ET_EXEC || hdr->e_type == ET_DYN) {
         Elf64_Phdr* phdr;
         elf_check(elf_get_phdr_wtype(PT_LOAD, &phdr));
         offset = sym->st_value - phdr->p_vaddr + phdr->p_offset;
@@ -532,7 +577,7 @@ static int elf_get_writable_sym_bytes(Elf64_Sym* sym, elf_bytebuffer* buf_ref, s
     return elf_stack_error(ELF_OK);
 }
 
-int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_constbytebuffer* buf_ref, size_t* size)
+int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_ro_bytebuff* buf_ref, size_t* size)
 {
     elf_bytebuffer buffer;
     elf_check(elf_get_writable_sym_bytes(sym, &buffer, size));
@@ -553,7 +598,16 @@ int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_bytebuffer buf, size_t 
     return elf_stack_error(ELF_OK);
 }
 
-int elf_print_sym_bytes(Elf64_Sym* func_sym, elf_constbytebuffer bytes, size_t size)
+int elf_print_sym_bytes_2(Elf64_Sym* sym)
+{
+    elf_ro_bytebuff buffer;
+    size_t size;
+    elf_check(elf_get_readonly_sym_bytes(sym, &buffer, &size));
+    elf_check(elf_print_sym_bytes(sym, buffer, size));
+    return elf_stack_error(ELF_OK);
+}
+
+int elf_print_sym_bytes(Elf64_Sym* func_sym, elf_ro_bytebuff bytes, size_t size)
 {
     Elf64_Ehdr* hdr;
     elf_check(elf_get_hdr(&hdr));

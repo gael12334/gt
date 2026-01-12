@@ -13,7 +13,7 @@
 #include <string.h>
 
 typedef const uint8_t elf_constbyte;
-typedef elf_constbyte* elf_constbytebuffer;
+typedef elf_constbyte* elf_ro_bytebuff;
 typedef uint8_t elf_byte;
 typedef elf_byte* elf_bytebuffer;
 
@@ -52,6 +52,7 @@ typedef struct {
     elf_error trace[ELF_TRACE_SIZE];
     size_t length;
     uint64_t old;
+    time_t timestamp;
 } elf_trace;
 
 typedef struct {
@@ -68,7 +69,8 @@ void elf_reset_error_trace(void);
 
 int elf_has_error(void);
 
-void elf_print_error_trace(void);
+#define elf_print_error_trace() elf_print_to_file_error_trace(stdout)
+void elf_print_to_file_error_trace(FILE* output);
 
 int elf_elf_loaded(void);
 
@@ -126,13 +128,15 @@ int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, elf_index_iterator* ite
 
 int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref);
 
-int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_constbytebuffer* const buf_ref, size_t* size);
+int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_ro_bytebuff* const buf_ref, size_t* size);
 
 int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_bytebuffer buf, size_t size);
 
 int elf_print_sym(Elf64_Shdr* sym_sh, Elf64_Sym* sym);
 
-int elf_print_sym_bytes(Elf64_Sym* sym, elf_constbytebuffer bytes, size_t size);
+int elf_print_sym_bytes(Elf64_Sym* sym, elf_ro_bytebuff bytes, size_t size);
+
+int elf_print_sym_bytes_2(Elf64_Sym* sym);
 
 int elf_print_sym_shdr(Elf64_Shdr* sym_sh);
 
