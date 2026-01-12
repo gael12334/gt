@@ -83,5 +83,62 @@ The output of the demo project [gt/demo](gt/demo):
 
 ### Documentation
 
-Coming soon.
+#### Build script
 
+Syntax: `./build.sh <option>`
+
+Options: 
+
+- `cli` : builds `cli.elf`
+- `gt` : builds `gt.o`
+- `demo` : builds `gt.o` if it does not exists, then builds `demo.elf`
+- `lib` : makes an archive (`libgt.a`) of `gt.o`. 
+- `all` : builds everything.
+- `test` : builds `cli.elf` if it does not exists, builds `gt.o`, `demo.elf`, runs the cli's patcher, then executes the test executable (`out`).
+
+#### Command line app
+
+Syntax: `./cli.elf <filename> <option>`
+
+Options: 
+
+- `header` : shows the elf's header info. 
+- `funclist` : shows the list of symbols with type `STT_FUNC`.
+- `func <name>` : shows the function symbol `<name>. `
+- `patch [verbose]` : patches the elf file. `verbose` is optional. 
+- `program` : shows the elf's program header array. 
+- `section` : shows the elf's section header array.
+
+#### Library (gt2.h & gt.o)
+
+`gt_test_function(name)`
+
+Macro. Required to write a test. Specifies the function currently tested. 
+
+`gt_test_case(name)`
+
+Macro. Required to write a test. Specifies the case currently tested. 
+
+`GT_MOCK_OF(function)`
+
+Macro. `gt_mockof_##function`. Uniformises the name of mock functions. 
+
+`gt_set_mock(function, data)`
+
+Macro. Required to register a mock and its data. 
+
+`gt_unmocked_section(mock)`
+
+Macro. Saves current registered mock into `mock`. Sets registered mock to NULL. Once section is executed, saved mock is re-registered. 
+
+`GT_STRUCT_OF(function)`
+
+Macro. `struct gt_structof##function`. Uniformises the name of the mock's data structs.
+
+`gt_get_data(function)`
+
+Macro. Gets the pointer to the mock's data. Parameter `function` is the name of the mocked function, used to cast void pointer to pointer of `GT_STRUCT_OF(function)`. 
+
+`gt_assert(a, mode, b)`
+
+Macro. Asserts that expression `a` and `b` with comparaison `mode` is true. `mode` can be one of the following values: GT_MODE_EQUALS, GT_MODE_NT_EQ (not equal), GT_MODE_LESSR, GT_MODE_BIGGR, GT_MODE_LE_EQ (lesser or equal), GT_MODE_GR_EQ (greater or equal). Do not use GT_MODE_NUMBR. The type of expression `a` is used for expression `b`. 
