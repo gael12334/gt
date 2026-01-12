@@ -1,2 +1,4 @@
-out/
-deps/cdocs
+pkg/
+*/cache/
+*/output/
+*/backup/
