@@ -3,7 +3,7 @@
 */
 
 #include "utils.h"
-#include "lib.h"
+#include "elf.h"
 #include <ctype.h>
 #include <stdio.h>
 

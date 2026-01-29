@@ -2,30 +2,16 @@
     Copyright (c) 2025 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
-#include "lib.h"
+#include "elf.h"
 #include <elf.h>
 #include <stdint.h>
 #include <time.h>
 
 static struct {
-    elf_trace trace;
     char path[PATH_MAX];
     uint8_t* data;
     size_t size;
 } elfpv = { 0 };
-
-// static void elf_dump_trace(void)
-// {
-//     char dump_filename[20] = { 0 };
-//     snprintf(dump_filename, sizeof(dump_filename), "%li", elfpv.trace.timestamp);
-//
-//     FILE* dump = fopen(dump_filename, "a+");
-//     elf_print_to_file_error_trace(dump);
-//     fclose(dump);
-//
-//     elfpv.trace.length = 0;
-//     memset(elfpv.trace.trace, 0, sizeof(elfpv.trace.trace));
-// }
 
 int elf_reset_index_iterator(elf_index_iterator* iterator_ref)
 {
@@ -37,53 +23,6 @@ int elf_reset_index_iterator(elf_index_iterator* iterator_ref)
     iterator_ref->index = 0;
     iterator_ref->done = 0;
     return elf_stack_error(ELF_OK);
-}
-
-int elf_stack_error_struct(elf_error error)
-{
-    if (elfpv.trace.old) {
-        elfpv.trace.length = 0;
-        elfpv.trace.old = 0;
-        time(&elfpv.trace.timestamp);
-    }
-
-    if (elfpv.trace.length < ELF_TRACE_SIZE) {
-        size_t* i = &elfpv.trace.length;
-        elfpv.trace.trace[*i] = error;
-        (*i)++;
-        (*i) = (*i) % ELF_TRACE_SIZE;
-    }
-
-    return error.code;
-}
-
-int elf_has_error(void)
-{
-    for (size_t i = 0; i < elfpv.trace.length; i++) {
-        if (elfpv.trace.trace[i].code != ELF_OK)
-            return 1;
-    }
-
-    return 0;
-}
-
-void elf_reset_error_trace(void)
-{
-    elfpv.trace.old = 1;
-}
-
-void elf_print_to_file_error_trace(FILE* output)
-{
-    if (output == NULL) {
-        return;
-    }
-
-    for (size_t i = 0; i < elfpv.trace.length; i++) {
-        fprintf(output, "%zu: %i\n", i, elfpv.trace.trace[i].code);
-        fprintf(output, "\tfile: %s\n", elfpv.trace.trace[i].file);
-        fprintf(output, "\tfunc: %s\n", elfpv.trace.trace[i].func);
-        fprintf(output, "\tline: %i\n\n", elfpv.trace.trace[i].line);
-    }
 }
 
 int elf_elf_loaded(void)
@@ -568,7 +507,7 @@ int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref)
     return elf_stack_error(ELF_OK);
 }
 
-static int elf_get_writable_sym_bytes(Elf64_Sym* sym, elf_bytebuffer* buf_ref, size_t* size)
+static int elf_get_writable_sym_bytes(Elf64_Sym* sym, elf_pub8* buf_ref, size_t* size)
 {
     size_t offset;
     elf_check(elf_get_sym_offset(sym, &offset));
@@ -577,18 +516,18 @@ static int elf_get_writable_sym_bytes(Elf64_Sym* sym, elf_bytebuffer* buf_ref, s
     return elf_stack_error(ELF_OK);
 }
 
-int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_ro_bytebuff* buf_ref, size_t* size)
+int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_pcub8* buf_ref, size_t* size)
 {
-    elf_bytebuffer buffer;
+    elf_pub8 buffer;
     elf_check(elf_get_writable_sym_bytes(sym, &buffer, size));
     *buf_ref = buffer;
     return elf_stack_error(ELF_OK);
 }
 
-int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_bytebuffer buf, size_t size)
+int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_pub8 buf, size_t size)
 {
     size_t buf_len;
-    elf_bytebuffer sym_buf;
+    elf_pub8 sym_buf;
     elf_check(elf_get_writable_sym_bytes(sym, &sym_buf, &buf_len));
 
     void* addr;
@@ -600,14 +539,14 @@ int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_bytebuffer buf, size_t 
 
 int elf_print_sym_bytes_2(Elf64_Sym* sym)
 {
-    elf_ro_bytebuff buffer;
+    elf_pcub8 buffer;
     size_t size;
     elf_check(elf_get_readonly_sym_bytes(sym, &buffer, &size));
     elf_check(elf_print_sym_bytes(sym, buffer, size));
     return elf_stack_error(ELF_OK);
 }
 
-int elf_print_sym_bytes(Elf64_Sym* func_sym, elf_ro_bytebuff bytes, size_t size)
+int elf_print_sym_bytes(Elf64_Sym* func_sym, elf_pcub8 bytes, size_t size)
 {
     Elf64_Ehdr* hdr;
     elf_check(elf_get_hdr(&hdr));

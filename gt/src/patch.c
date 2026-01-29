@@ -20,8 +20,8 @@
         0x5d,                                       // pop rbp
         0xc3                                        // ret
 */
+#include "elf.h"
 #include "gt2.h"
-#include "lib.h"
 #include <elf.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -63,7 +63,7 @@ typedef struct {
     size_t text_size;
     Elf64_Sym* symbol;
     Elf64_Shdr* section;
-    elf_ro_bytebuff text;
+    elf_pcub8 text;
     const char* name;
     size_t name_length;
     Elf64_Shdr* name_section;

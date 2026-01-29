@@ -2,7 +2,8 @@
     Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
 */
 
-#include "lib.h"
+#include "cli.h"
+#include "elf.h"
 #include "patch.h"
 #include <elf.h>
 #include <stdarg.h>
@@ -10,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void check(int result)
+static void check(int result)
 {
     if (result) {
         if (elf_elf_loaded()) {

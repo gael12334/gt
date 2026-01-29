@@ -12,65 +12,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef const uint8_t elf_constbyte;
-typedef elf_constbyte* elf_ro_bytebuff;
-typedef uint8_t elf_byte;
-typedef elf_byte* elf_bytebuffer;
+#include "errors.h"
 
-typedef enum {
-    ELF_OK,
-    ELF_QUIT,
-    ELF_DONE,
-    ELF_ERR_LOADED,
-    ELF_ERR_PATH,
-    ELF_ERR_MALLOC,
-    ELF_ERR_UNLOADED,
-    ELF_ERR_SEGFAULT,
-    ELF_ERR_INDEX,
-    ELF_ERR_ARGC,
-    ELF_ERR_ELF,
-    ELF_ERR_NOT_NUMBER,
-    ELF_ERR_OFFSET,
-    ELF_ERR_NOT_FOUND,
-    ELF_ERR_DIV_ZERO,
-    ELF_ERR_OPTION,
-    ELF_ERR_TYPE,
-    ELF_ERR_INVALID_SIZE,
-    ELF_ERR_NULL,
-    ELF_ERR_NOT_IMPL,
-} elf_error_code;
+typedef const uint8_t elf_cub8;
+typedef elf_cub8* elf_pcub8;
+typedef uint8_t elf_ub8;
+typedef elf_ub8* elf_pub8;
 
-typedef struct {
-    const char* file;
-    const char* func;
-    int line;
-    int code;
-} elf_error;
-
-#define ELF_TRACE_SIZE 1024
-typedef struct {
-    elf_error trace[ELF_TRACE_SIZE];
-    size_t length;
-    uint64_t old;
-    time_t timestamp;
-} elf_trace;
-
-typedef struct {
+typedef struct elf_index_iterator {
     void* object;
     uint64_t index;
     uint64_t done;
 } elf_index_iterator;
 
 int elf_reset_index_iterator(elf_index_iterator* iterator_ref);
-
-int elf_stack_error_struct(elf_error error);
-
-void elf_reset_error_trace(void);
-
-int elf_has_error(void);
-
-#define elf_print_error_trace() elf_print_to_file_error_trace(stdout)
-void elf_print_to_file_error_trace(FILE* output);
 
 int elf_elf_loaded(void);
 
@@ -128,27 +83,17 @@ int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, elf_index_iterator* ite
 
 int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref);
 
-int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_ro_bytebuff* const buf_ref, size_t* size);
+int elf_get_readonly_sym_bytes(Elf64_Sym* sym, elf_pcub8* const buf_ref, size_t* size);
 
-int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_bytebuffer buf, size_t size);
+int elf_set_sym_bytes(Elf64_Sym* sym, size_t offset, elf_pub8 buf, size_t size);
 
 int elf_print_sym(Elf64_Shdr* sym_sh, Elf64_Sym* sym);
 
-int elf_print_sym_bytes(Elf64_Sym* sym, elf_ro_bytebuff bytes, size_t size);
+int elf_print_sym_bytes(Elf64_Sym* sym, elf_pcub8 bytes, size_t size);
 
 int elf_print_sym_bytes_2(Elf64_Sym* sym);
 
 int elf_print_sym_shdr(Elf64_Shdr* sym_sh);
-
-#define elf_stack_error(code) \
-    elf_stack_error_struct((elf_error) { __FILE__, __func__, __LINE__, code })
-
-#define elf_check(expr)                  \
-    {                                    \
-        int err = expr;                  \
-        if (err)                         \
-            return elf_stack_error(err); \
-    }
 
 #define elf_newl(x, ...) printf(x "\n", __VA_ARGS__)
 

@@ -28,8 +28,8 @@ int gt_test_main()
         gt_test_case(null_vector)
         {
             // arrange
-            GT_STRUCT_OF(normalise_vector)
-            data = {
+            typedef GT_STRUCT_OF(normalise_vector) data_t;
+            data_t data = {
                 .called = 0,
                 .retval = (vector) {
                     .x = 0.f,
@@ -50,5 +50,6 @@ int gt_test_main()
             gt_assert(r.x, GT_MODE_EQUAL, 0.f);
         }
     }
+
     return 0;
 }
