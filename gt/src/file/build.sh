@@ -38,6 +38,11 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+build_dependency ../buf build.sh buf.o
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
 gcc -o out/file.o file.c -c -ggdb -L/usr/lib -I/usr/include
 if [ $? -ne 0 ]; then
     exit 1

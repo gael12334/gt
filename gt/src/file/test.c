@@ -3,175 +3,113 @@
  */
 
 #include "file.h"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+void test_gt_file_load(void)
+{
+    // arrange
+    const char text[] = "hello";
+    FILE*      file = fopen("file.txt", "w");
+
+    assert(file != NULL);
+    fwrite(text, 1, sizeof(text), file);
+    fclose(file);
+
+    // act
+    gt_buf buf = { 0 };
+    int    r = gt_file_load("file.txt", &buf);
+
+    // assert
+    if (r)
+        printf("result was %i\n", r);
+    else if (strncmp(text, buf.data, sizeof(text)) != 0)
+        printf("file text not equal to %s\n", text);
+    else
+        printf("ok\n");
+
+    // clean up
+    if (buf.data)
+        free(buf.data);
+
+    remove("file.txt");
+}
+
+void test_gt_file_unload(void)
+{
+    // arrange
+    gt_buf buf = { 0 };
+    buf.data = malloc(10);
+    assert(buf.data != NULL);
+    buf.size = 10;
+
+    // act
+    int r = gt_file_unload(&buf);
+
+    // assert
+    if (r)
+        printf("result was %i\n", r);
+    else if (buf.data != NULL)
+        printf("data other than null\n");
+    else
+        printf("ok\n");
+
+    // clean up
+    if (buf.data)
+        free(buf.data);
+}
+
+void test_gt_file_save(void)
+{
+    // arrange
+    char   data[] = "123456";
+    gt_buf buf = { .data = data, .size = sizeof(data) };
+
+    // act
+    int r = gt_file_save(&buf, "test.txt");
+
+    // assert
+    FILE* f = fopen("test.txt", "r");
+    if (f == NULL) {
+        printf("test.txt absent\n");
+        return;
+    }
+
+    fseek(f, 0, SEEK_END);
+    int size = ftell(f);
+    if (size != sizeof(data))
+        printf("size is different\n");
+    else
+        printf("ok\n");
+
+    // clean up
+    fclose(f);
+    remove("test.txt");
+}
+
+void test_gt_file_exists(void)
+{
+    // arrange
+
+    // act
+    int exists = 0;
+    int r = gt_file_exists("test.txt", &exists);
+
+    // assert
+    if (r)
+        printf("result was %i\n", r);
+    else if (exists != 0)
+        printf("exists was false\n");
+    else
+        printf("ok\n");
+}
 
 int main(int argc, char** argv)
 {
-    const char content[] = "hello";
-
-    int test_gt_file_load = 0;
-    while (!test_gt_file_load) {
-        // arrange
-        FILE* fd = fopen("./test.txt", "w");
-        if (fd == NULL) {
-            printf("failed to write test.txt\n");
-            break;
-        }
-
-        fwrite(content, 1, sizeof(content), fd);
-        fclose(fd);
-
-        // act
-        gt_file file = { 0 };
-        int     error = gt_file_load("./test.txt", &file);
-
-        // assert
-        if (error) {
-            printf("error %i\n", error);
-            break;
-        }
-
-        if (file.size != sizeof(content)) {
-            printf("size is %lu, expected %lu\n", file.size, sizeof(content));
-            break;
-        }
-
-        if (memcmp(content, file.bytes, file.size) != 0) {
-            printf("data from file does not match\n");
-            break;
-        }
-
-        free(file.bytes);
-        remove(file.path);
-        printf("ok\n");
-        test_gt_file_load = 1;
-    }
-
-    int test_gt_file_unload = 0;
-    while (!test_gt_file_unload) {
-        // arrange
-        uint8_t* buf = malloc(sizeof(content));
-        memcpy(buf, content, sizeof(content));
-        gt_file file = { .bytes = buf, .size = sizeof(content), .path = {} };
-
-        // act
-        int error = gt_file_unload(&file);
-
-        // assert
-        if (error) {
-            printf("error %i\n", error);
-            free(buf);
-            break;
-        }
-
-        printf("ok\n");
-        test_gt_file_unload = 1;
-    }
-
-    int test_gt_file_save = 0;
-    while (!test_gt_file_save) {
-        // arrange
-        uint8_t* buf = malloc(sizeof(content));
-        memcpy(buf, content, sizeof(content));
-        gt_file file = { .bytes = buf, .size = sizeof(content), .path = {} };
-
-        // act
-        int error = gt_file_save("./test.txt", &file);
-
-        // assert
-        if (error) {
-            printf("error %i\n", error);
-            free(buf);
-            break;
-        }
-
-        FILE* fd = fopen("./test.txt", "r");
-        if (fd == NULL) {
-            printf("file was not saved\n");
-            free(buf);
-            break;
-        }
-
-        printf("ok\n");
-        fclose(fd);
-        remove("./test.txt");
-        free(buf);
-        test_gt_file_save = 1;
-    }
-
-    int test_gt_file_getaddr = 0;
-    while (!test_gt_file_getaddr) {
-        // arrange
-        gt_file file = { .bytes = (uint8_t*)content, .size = sizeof(content), .path = {} };
-        int     index = 2;
-
-        // act
-        uint8_t* result;
-        int      error = gt_file_getaddr(&file, index, (void**)&result);
-
-        // assert
-        if (error) {
-            printf("error %i\n", error);
-            break;
-        }
-
-        if (*result != content[index]) {
-            printf("byte at index %i (%hhu) was not expected\n", index, *result);
-            break;
-        }
-
-        printf("ok\n");
-        test_gt_file_getaddr = 1;
-    }
-
-    int test_gt_file_writeat = 0;
-    while (!test_gt_file_writeat) {
-        // arrange
-        uint8_t writable_buffer[64];
-        gt_file file = { .bytes = writable_buffer, .size = sizeof(writable_buffer), .path = {} };
-        int     index = 2;
-
-        // act
-        uint8_t* result;
-        int      error = gt_file_writeat(&file, index, (void*)content, sizeof(content));
-
-        // assert
-        if (error) {
-            printf("error %i\n", error);
-            break;
-        }
-
-        if (strcmp((char*)&file.bytes[index], content) != 0) {
-            printf("data written differs from content\n");
-            break;
-        }
-
-        printf("ok\n");
-        test_gt_file_writeat = 1;
-    }
-
-    int test_gt_file_getrange = 0;
-    while (!test_gt_file_getrange) {
-        // arrange
-        gt_file file = { .bytes = (uint8_t*)content, .size = sizeof(content), .path = {} };
-        int     start = 2;
-        int     size = 3;
-
-        // act
-        void *startptr, *endptr;
-        int   error = gt_file_getrange(&file, start, size, &startptr, &endptr);
-
-        // assert
-        if (error) {
-            printf("error %i\n", error);
-            break;
-        }
-
-        if (startptr != &content[start] || endptr != &content[start + size]) {
-            printf("range is invalid\n");
-            break;
-        }
-
-        printf("ok\n");
-        test_gt_file_getrange = 1;
-    }
+    test_gt_file_load();
+    test_gt_file_unload();
+    test_gt_file_save();
+    test_gt_file_exists();
+    return 0;
 }

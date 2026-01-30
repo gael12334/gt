@@ -58,6 +58,8 @@ int gt_buf_read(gt_buf* buf, size_t size, void* data)
     return GT_BUF_OK;
 }
 
+// Distance from the start of a buffer to the start of a segment of itself.
+// If start of segment outside buffer's range, returns GT_BUF_FAILURE_SEGFAULT.
 int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist)
 {
     GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
@@ -66,13 +68,25 @@ int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist)
     GT_PRECOND(seg->data == NULL, GT_BUF_INVALID_SEG);
     GT_PRECOND(out_dist == NULL, GT_BUF_INVALID_OUT);
 
-    uintptr_t bufptr = (uintptr_t)buf->data;
-    uintptr_t segptr = (uintptr_t)seg->data;
+    uintptr_t bufdata = (uintptr_t)buf->data;
+    uintptr_t segdata = (uintptr_t)seg->data;
 
-    if (bufptr >= segptr && segptr < bufptr + seg->size) {
-        *out_dist = segptr - bufptr;
-        return GT_BUF_OK;
-    }
+    if (segdata < bufdata)
+        return gt_trace(GT_HERE, GT_BUF_FAILURE_SEGFAULT);
+    if (segdata >= bufdata + buf->size)
+        return gt_trace(GT_HERE, GT_BUF_FAILURE_SEGFAULT);
 
-    return gt_trace(GT_HERE, GT_BUF_FAILURE_SEGFAULT);
+    *out_dist = seg->data - buf->data;
+    return GT_BUF_OK;
+}
+
+int gt_buf_data(gt_buf* buf, void** out_data)
+{
+    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_PRECOND(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_PRECOND(out_data == NULL, GT_BUF_INVALID_OUT);
+    GT_PRECOND(*out_data != NULL, GT_BUF_INVALID_OUT);
+
+    *out_data = buf->data;
+    return GT_BUF_OK;
 }

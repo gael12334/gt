@@ -30,3 +30,4 @@ int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg);
 int gt_buf_write(gt_buf* buf, size_t size, void* data);
 int gt_buf_read(gt_buf* buf, size_t size, void* data);
 int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist);
+int gt_buf_data(gt_buf* buf, void** out_data);
