@@ -27,7 +27,9 @@ typedef struct {
 int gt_buf_init(size_t size, void* data, gt_buf* out_buf);
 int gt_buf_deinit(gt_buf* buf);
 int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg);
-int gt_buf_write(gt_buf* buf, size_t size, void* data);
+int gt_buf_write(gt_buf* buf, size_t size, const void* data);
+int gt_buf_writeat(gt_buf* buf, size_t offset, size_t size, const void* data);
 int gt_buf_read(gt_buf* buf, size_t size, void* data);
+int gt_buf_reatat(gt_buf* buf, size_t off, size_t size, void* data);
 int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist);
 int gt_buf_data(gt_buf* buf, void** out_data);

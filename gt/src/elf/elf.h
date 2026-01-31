@@ -3,16 +3,19 @@
  */
 
 #pragma once
-#include "struct.h"
+#include "../buf/buf.h"
+#include "../trace/trace.h"
+#include "def.h"
 
-/*
- * Reference :
- *
- * elf(5) - Linux manual page. (n.d.). Man7.org.
- * https://man7.org/linux/man-pages/man5/elf.5.html
- *
- * Matz, M., Hubička, J., Jaeger, A., & Mitchell, M. (2012).
- * System V Application Binary Interface AMD64 Architecture Processor Supplement Draft Version.
- * https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf
- *
- */
+typedef enum {
+    GT_ELF_OK,
+    GT_ELF_INVALID_OUT,
+    GT_ELF_INVALID_IDENT,
+    GT_ELF_INVALID_CLASS,
+    GT_ELF_INVALID_INDEX,
+} gt_elf_result;
+
+int gt_elf_getident(gt_buf* buf, gt_elfident* out_ident);
+int gt_elf_gethdr(gt_buf* buf, gt_elfident* ident, gt_elfhdr64* out_hdr);
+int gt_elf_getshdr(gt_buf* buf, gt_elfhdr64* hdr, size_t index, gt_elfshdr64* out_shdr);
+int gt_elf_getphdr(gt_buf* buf, gt_elfhdr64* hdr, size_t index, gt_elfphdr64* out_phdr);
