@@ -5,7 +5,12 @@
 #pragma once
 #include "../location/location.h"
 
-#define GT_PRECOND(condition, result)     \
+#define GT_TRYTHIS(expr)                 \
+    if (expr) {                          \
+        return gt_trace_foward(GT_HERE); \
+    }
+
+#define GT_THROWIF(condition, result)     \
     if (condition) {                      \
         return gt_trace(GT_HERE, result); \
     }

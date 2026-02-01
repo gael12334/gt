@@ -8,10 +8,10 @@
 
 int gt_buf_init(size_t size, void* data, gt_buf* out_buf)
 {
-    GT_PRECOND(data == NULL, GT_BUF_INVALID_DATA);
-    GT_PRECOND(out_buf == NULL, GT_BUF_INVALID_OUT);
-    GT_PRECOND(out_buf->data != NULL, GT_BUF_FAILURE_UNZEROED);
-    GT_PRECOND(out_buf->size != 0, GT_BUF_FAILURE_UNZEROED);
+    GT_THROWIF(data == NULL, GT_BUF_INVALID_DATA);
+    GT_THROWIF(out_buf == NULL, GT_BUF_INVALID_OUT);
+    GT_THROWIF(out_buf->data != NULL, GT_BUF_FAILURE_UNZEROED);
+    GT_THROWIF(out_buf->size != 0, GT_BUF_FAILURE_UNZEROED);
     out_buf->data = data;
     out_buf->size = size;
     return GT_BUF_OK;
@@ -19,16 +19,16 @@ int gt_buf_init(size_t size, void* data, gt_buf* out_buf)
 
 int gt_buf_deinit(gt_buf* buf)
 {
-    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
     memset(buf, 0, sizeof(*buf));
     return GT_BUF_OK;
 }
 
 int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg)
 {
-    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(buf->data == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(offset + size > buf->size, GT_BUF_FAILURE_SEGFAULT);
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(offset + size > buf->size, GT_BUF_FAILURE_SEGFAULT);
 
     if (gt_buf_init(size, buf->data + offset, out_seg))
         return gt_trace_foward(GT_HERE);
@@ -38,10 +38,10 @@ int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg)
 
 int gt_buf_write(gt_buf* buf, size_t size, const void* data)
 {
-    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(buf->data == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(data == NULL, GT_BUF_INVALID_DATA);
-    GT_PRECOND(size > buf->size, GT_BUF_FAILURE_SEGFAULT);
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(data == NULL, GT_BUF_INVALID_DATA);
+    GT_THROWIF(size > buf->size, GT_BUF_FAILURE_SEGFAULT);
 
     memcpy(buf->data, data, size);
     return GT_BUF_OK;
@@ -59,10 +59,10 @@ int gt_buf_writeat(gt_buf* buf, size_t offset, size_t size, const void* data)
 
 int gt_buf_read(gt_buf* buf, size_t size, void* data)
 {
-    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(buf->data == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(data == NULL, GT_BUF_INVALID_DATA);
-    GT_PRECOND(size < buf->size, GT_BUF_INVALID_SIZE);
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(data == NULL, GT_BUF_INVALID_DATA);
+    GT_THROWIF(size < buf->size, GT_BUF_INVALID_SIZE);
 
     memcpy(data, buf->data, size);
     return GT_BUF_OK;
@@ -82,17 +82,17 @@ int gt_buf_readat(gt_buf* buf, size_t offset, size_t size, void* data)
 // If start of segment outside buffer's range, returns GT_BUF_FAILURE_SEGFAULT.
 int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist)
 {
-    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(buf->data == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(seg == NULL, GT_BUF_INVALID_SEG);
-    GT_PRECOND(seg->data == NULL, GT_BUF_INVALID_SEG);
-    GT_PRECOND(out_dist == NULL, GT_BUF_INVALID_OUT);
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(seg == NULL, GT_BUF_INVALID_SEG);
+    GT_THROWIF(seg->data == NULL, GT_BUF_INVALID_SEG);
+    GT_THROWIF(out_dist == NULL, GT_BUF_INVALID_OUT);
 
     uintptr_t bufdata = (uintptr_t)buf->data;
     uintptr_t segdata = (uintptr_t)seg->data;
 
-    GT_PRECOND(segdata < bufdata, GT_BUF_FAILURE_SEGFAULT);
-    GT_PRECOND(segdata >= bufdata + buf->size, GT_BUF_FAILURE_SEGFAULT);
+    GT_THROWIF(segdata < bufdata, GT_BUF_FAILURE_SEGFAULT);
+    GT_THROWIF(segdata >= bufdata + buf->size, GT_BUF_FAILURE_SEGFAULT);
 
     *out_dist = seg->data - buf->data;
     return GT_BUF_OK;
@@ -100,11 +100,21 @@ int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist)
 
 int gt_buf_data(gt_buf* buf, void** out_data)
 {
-    GT_PRECOND(buf == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(buf->data == NULL, GT_BUF_INVALID_BUF);
-    GT_PRECOND(out_data == NULL, GT_BUF_INVALID_OUT);
-    GT_PRECOND(*out_data != NULL, GT_BUF_INVALID_OUT);
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(out_data == NULL, GT_BUF_INVALID_OUT);
+    GT_THROWIF(*out_data != NULL, GT_BUF_INVALID_OUT);
 
     *out_data = buf->data;
+    return GT_BUF_OK;
+}
+
+int gt_buf_size(gt_buf* buf, size_t* out_size)
+{
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(out_size == NULL, GT_BUF_INVALID_OUT);
+
+    *out_size = buf->size;
     return GT_BUF_OK;
 }

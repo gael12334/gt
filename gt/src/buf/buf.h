@@ -17,6 +17,7 @@ typedef enum {
     GT_BUF_INVALID_SEG,
     GT_BUF_FAILURE_SEGFAULT,
     GT_BUF_FAILURE_UNZEROED,
+    GT_BUF_RESULTS_TOOSMALL,
 } gt_buf_result;
 
 typedef struct {
@@ -33,3 +34,4 @@ int gt_buf_read(gt_buf* buf, size_t size, void* data);
 int gt_buf_reatat(gt_buf* buf, size_t off, size_t size, void* data);
 int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist);
 int gt_buf_data(gt_buf* buf, void** out_data);
+int gt_buf_size(gt_buf* buf, size_t* out_size);
