@@ -10,6 +10,12 @@
         return gt_trace_foward(GT_HERE); \
     }
 
+#define GT_TRYSAFE(expr, label)   \
+    if (expr) {                   \
+        gt_trace_foward(GT_HERE); \
+        label;                    \
+    }
+
 #define GT_THROWIF(condition, result)     \
     if (condition) {                      \
         return gt_trace(GT_HERE, result); \

@@ -36,6 +36,14 @@ int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg)
     return GT_BUF_OK;
 }
 
+int gt_buf_effective(gt_buf* buf, size_t offset, size_t size, void** out)
+{
+    gt_buf seg = GT_BUF_ZEROED;
+    GT_TRYTHIS(gt_buf_segment(buf, offset, size, &seg));
+    GT_TRYTHIS(gt_buf_data(&seg, out));
+    return GT_BUF_OK;
+}
+
 int gt_buf_write(gt_buf* buf, size_t size, const void* data)
 {
     GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
@@ -49,7 +57,7 @@ int gt_buf_write(gt_buf* buf, size_t size, const void* data)
 
 int gt_buf_writeat(gt_buf* buf, size_t offset, size_t size, const void* data)
 {
-    gt_buf seg = { 0 };
+    gt_buf seg = GT_BUF_ZEROED;
     if (gt_buf_segment(buf, offset, size, &seg))
         return gt_trace_foward(GT_HERE);
     if (gt_buf_write(&seg, size, data))
@@ -70,7 +78,7 @@ int gt_buf_read(gt_buf* buf, size_t size, void* data)
 
 int gt_buf_readat(gt_buf* buf, size_t offset, size_t size, void* data)
 {
-    gt_buf seg = { 0 };
+    gt_buf seg = GT_BUF_ZEROED;
     if (gt_buf_segment(buf, offset, size, &seg))
         return gt_trace_foward(GT_HERE);
     if (gt_buf_read(&seg, size, data))
