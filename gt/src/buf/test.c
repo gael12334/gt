@@ -117,6 +117,66 @@ void test_gt_buf_distance(void)
         printf("ok\n");
 }
 
+void test_gt_buf_data(void)
+{
+    // arrange
+    char   data[64] = { 0 };
+    gt_buf buf = { .data = data, .size = sizeof(data) };
+
+    // act
+    void* ptr = NULL;
+    int   result = gt_buf_data(&buf, &ptr);
+
+    // assert
+    if (result != GT_BUF_OK)
+        printf("result was %i\n", result);
+    else if (ptr != data)
+        printf("data was %p", ptr);
+    else
+        printf("ok\n");
+}
+
+void test_gt_buf_size(void)
+{
+    // arrange
+    char   data[64] = { 0 };
+    gt_buf buf = { .data = data, .size = sizeof(data) };
+
+    // act
+    size_t size = 0;
+    int    result = gt_buf_size(&buf, &size);
+
+    // assert
+    if (result != GT_BUF_OK)
+        printf("result was %i\n", result);
+    else if (size != buf.size)
+        printf("size was %zu", size);
+    else
+        printf("ok\n");
+}
+
+void test_gt_buf_equals(void)
+{
+    // arrange
+    char   data1[] = "hello world!!!";
+    gt_buf buf1 = { .data = data1, .size = sizeof(data1) };
+
+    char   data2[] = "hello world!!!";
+    gt_buf buf2 = { .data = data2, .size = sizeof(data2) };
+
+    // act
+    int equals = 0;
+    int result = gt_buf_equals(&buf1, &buf2, &equals);
+
+    // assert
+    if (result != GT_BUF_OK)
+        printf("result was %i\n", result);
+    else if (equals == 0)
+        printf("equals was %i\n", equals);
+    else
+        printf("ok\n");
+}
+
 int main(int argc, char** argv)
 {
     test_gt_buf_init();
@@ -125,5 +185,8 @@ int main(int argc, char** argv)
     test_gt_buf_write();
     test_gt_buf_read();
     test_gt_buf_distance();
+    test_gt_buf_data();
+    test_gt_buf_size();
+    test_gt_buf_equals();
     return 0;
 }

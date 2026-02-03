@@ -39,3 +39,4 @@ int gt_buf_reatat(gt_buf* buf, size_t off, size_t size, void* data);
 int gt_buf_distance(gt_buf* buf, gt_buf* seg, size_t* out_dist);
 int gt_buf_data(gt_buf* buf, void** out_data);
 int gt_buf_size(gt_buf* buf, size_t* out_size);
+int gt_buf_equals(gt_buf* buf, gt_buf* other, int* out);

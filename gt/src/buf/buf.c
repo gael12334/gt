@@ -4,6 +4,7 @@
 
 #include "buf.h"
 #include "../trace/trace.h"
+#include <stdint.h>
 #include <string.h>
 
 int gt_buf_init(size_t size, void* data, gt_buf* out_buf)
@@ -124,5 +125,33 @@ int gt_buf_size(gt_buf* buf, size_t* out_size)
     GT_THROWIF(out_size == NULL, GT_BUF_INVALID_OUT);
 
     *out_size = buf->size;
+    return GT_BUF_OK;
+}
+#include <stdio.h>
+int gt_buf_equals(gt_buf* buf1, gt_buf* buf2, int* out)
+{
+    GT_THROWIF(buf1 == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf1->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(out == NULL, GT_BUF_INVALID_OUT);
+
+    uint64_t  index = 0;
+    uint64_t  equals = 1;
+    uint64_t* bucket1 = buf1->data;
+    uint64_t* bucket2 = buf2->data;
+
+    equals = (buf1->size == buf2->size);
+    while (equals && index < buf1->size) {
+        uint64_t next = index + sizeof(uint64_t);
+        uint64_t over = (next - buf1->size) * (next > buf1->size);
+        uint64_t mask = UINT64_MAX >> (over * 8);
+        uint64_t val1 = *bucket1 & mask;
+        uint64_t val2 = *bucket2 & mask;
+        equals &= (val1 == val2);
+        index = next - over;
+        bucket1++;
+        bucket2++;
+    }
+
+    *out = equals;
     return GT_BUF_OK;
 }

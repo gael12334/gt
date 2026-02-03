@@ -127,10 +127,5 @@ int gt_elf32_shnum(gt_elf32* elf, size_t* out)
 {
     int loaded = 0;
 
-    GT_TRYTHIS(gt_elf32_loaded(elf, &loaded));
-    GT_THROWIF(loaded == GT_ELF_UNLOADED, GT_ELF_FAILURE_UNLOADED);
-    GT_THROWIF(out == NULL, GT_ELF_INVALID_OUT);
-
-    *out = elf->header->shnum;
     return GT_ELF_OK;
 }
