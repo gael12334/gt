@@ -31,7 +31,7 @@ typedef struct {
 int gt_buf_init(size_t size, void* data, gt_buf* out_buf);
 int gt_buf_deinit(gt_buf* buf);
 int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg);
-int gt_buf_effective(gt_buf* buf, size_t offset, size_t size, void** out);
+int gt_buf_address(gt_buf* buf, size_t offset, size_t size, void** out);
 int gt_buf_write(gt_buf* buf, size_t size, const void* data);
 int gt_buf_writeat(gt_buf* buf, size_t offset, size_t size, const void* data);
 int gt_buf_read(gt_buf* buf, size_t size, void* data);

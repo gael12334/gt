@@ -3,129 +3,127 @@
  */
 
 #include "elf.h"
-#include <string.h>
 
-/****************************
- *    Internal functions
- ****************************/
-
-/****************************
- * Internal 32 bit functions
- ****************************/
-
-static int gt_elf32_hash_name(gt_elf32_ehdr* ehdr, const char* name, size_t max, unsigned int* out)
+static int gt_elf_assert_class(gt_buf* buf, gt_elf_ident_class clazz)
 {
-    GT_THROWIF(ehdr == NULL, GT_ELF_INVALID_EHDR);
-    GT_THROWIF(name == NULL, GT_ELF_INVALID_NAME);
-    GT_THROWIF(out == NULL, GT_ELF_INVALID_OUT);
-
-    unsigned int sum = 0;
-    for (int i = 0; name[i] != '\0' && i < max; i++) {
-        sum += name[i];
-        if (sum >= ehdr->shnum) {
-            sum -= ehdr->shnum;
-        }
-    }
-
-    *out = sum;
-    return GT_ELF_OK;
-}
-
-static int gt_elf32_lookup_insert(gt_elf_shlookup* lookup, unsigned int index, gt_elf32_shdr* shdr)
-{
-    GT_THROWIF(lookup == NULL, GT_ELF_INVALID_LOOKUP);
-    GT_THROWIF(index >= lookup->length, GT_ELF_INVALID_SIZE);
-
-    // infinite loop very unlikely to happen.
-    while (lookup->lookup[index] != NULL) {
-        index++;
-        if (index >= lookup->length)
-            index -= lookup->length;
-    }
-
-    lookup->lookup[index] = shdr;
-    return GT_ELF_OK;
-}
-
-/*************************
- *    32 bit functions
- *************************/
-
-int gt_elf32_load(gt_buf* buf, gt_elf32* out)
-{
-    GT_THROWIF(out == NULL, GT_ELF_INVALID_OUT);
-    GT_THROWIF(out->buffer != NULL, GT_ELF_FAILURE_LOADED);
-    GT_THROWIF(out->header != NULL, GT_ELF_FAILURE_LOADED);
-    GT_THROWIF(out->programs != NULL, GT_ELF_FAILURE_LOADED);
-    GT_THROWIF(out->sections != NULL, GT_ELF_FAILURE_LOADED);
-
     gt_elf_ident* ident = NULL;
-    GT_TRYTHIS(gt_buf_effective(buf, 0, sizeof(*ident), (void**)&ident));
-    GT_THROWIF(ident->clazz != GT_ELF_IDENT_CLASS_32, GT_ELF_INVALID_CLASS);
+    GT_TRYTHIS(gt_elf_get_ident(buf, &ident));
+    GT_THROWIF(ident->magic[0] != 0x7f, GT_ELF_INVALID_MAGIC);
+    GT_THROWIF(ident->magic[1] != 'E', GT_ELF_INVALID_MAGIC);
+    GT_THROWIF(ident->magic[2] != 'L', GT_ELF_INVALID_MAGIC);
+    GT_THROWIF(ident->magic[3] != 'F', GT_ELF_INVALID_MAGIC);
+    GT_THROWIF(ident->clazz != clazz, GT_ELF_INVALID_CLASS);
+    return GT_ELF_OK;
+}
 
+int gt_elf_get_ident(gt_buf* buf, gt_elf_ident** out_ident)
+{
+    GT_TRYTHIS(gt_buf_address(buf, 0, sizeof(gt_elf_ident), (void**)out_ident));
+    return GT_ELF_OK;
+}
+
+int gt_elf32_get_header(gt_buf* buf, gt_elf32_ehdr** out_ehdr)
+{
+    GT_TRYTHIS(gt_elf_assert_class(buf, GT_ELF_IDENT_CLASS_32));
+    GT_TRYTHIS(gt_buf_address(buf, 0, sizeof(gt_elf32_ehdr), (void**)out_ehdr));
+    return GT_ELF_OK;
+}
+
+int gt_elf32_get_shdr_array(gt_buf* buf, size_t* out_num, gt_elf32_shdr** out_shdr)
+{
     gt_elf32_ehdr* header = NULL;
-    GT_TRYTHIS(gt_buf_effective(buf, 0, sizeof(*header), (void**)&header));
+    GT_TRYTHIS(gt_elf32_get_header(buf, &header));
+    GT_THROWIF(header->shentsize != sizeof(gt_elf32_shdr), GT_ELF_INVALID_EHDR);
 
-    gt_elf32_shdr* sections = NULL;
-    GT_TRYTHIS(gt_buf_effective(buf, header->shoff, header->shentsize * header->shnum, (void**)&sections));
+    size_t size = header->shentsize * header->shnum;
+    GT_TRYTHIS(gt_buf_address(buf, header->shoff, size, (void**)out_shdr))
+    *out_num = header->shnum;
 
-    gt_elf32_phdr* programs = NULL;
-    GT_TRYTHIS(gt_buf_effective(buf, header->phoff, header->phentsize * header->phnum, (void**)&programs));
-
-    if (header->shstrndx == GT_ELF_SHN_UNDEF) {
-        out->buffer = buf;
-        out->header = header;
-        out->programs = programs;
-        out->sections = sections;
-        out->shstrtab = (gt_elf_strtab) { 0 };
-        out->shlookup = (gt_elf_shlookup) { 0 };
-    }
-
-    gt_elf32_shdr*  shstrsh = &sections[header->shstrndx];
-    gt_elf_shlookup shlookup = { 0 };
-    gt_elf_strtab   strtab = { 0 };
-
-    shlookup.length = header->shnum;
-    shlookup.lookup = malloc(sizeof(void**) * header->shnum);
-    GT_THROWIF(shlookup.lookup == NULL, GT_ELF_FAILURE_MALLOC);
-
-    strtab.size = shstrsh->size;
-    strtab.addr = NULL;
-    GT_TRYSAFE(gt_buf_effective(buf, shstrsh->offset, shstrsh->size, (void**)&strtab.addr), goto on_error);
-
-    memset(shlookup.lookup, 0, sizeof(void**) * header->shnum);
-
-    for (uint64_t i = 0; i < header->shnum; i++) {
-        unsigned int index = 0;
-        const char*  name = strtab.addr + sections[i].name;
-        GT_TRYSAFE(gt_elf32_hash_name(header, name, strtab.size, &index), goto on_error);
-        GT_TRYSAFE(gt_elf32_lookup_insert(&shlookup, index, &sections[i]), goto on_error);
-    }
-
-    out->buffer = buf;
-    out->header = header;
-    out->programs = programs;
-    out->sections = sections;
-    out->shstrtab = strtab;
-    out->shlookup = shlookup;
-    return GT_ELF_OK;
-
-on_error:
-    free(shlookup.lookup);
-    return gt_trace_get_result();
-}
-
-int gt_elf32_unload(gt_elf32* elf)
-{
-    GT_THROWIF(elf == NULL, GT_ELF_INVALID_ELF);
-
-    memset(elf, 0, sizeof(*elf));
     return GT_ELF_OK;
 }
 
-int gt_elf32_shnum(gt_elf32* elf, size_t* out)
+int gt_elf32_get_phdr_array(gt_buf* buf, size_t* out_num, gt_elf32_phdr** out_phdr)
 {
-    int loaded = 0;
+    gt_elf32_ehdr* header = NULL;
+    GT_TRYTHIS(gt_elf32_get_header(buf, &header));
+    GT_THROWIF(header->phentsize != sizeof(gt_elf32_phdr), GT_ELF_INVALID_EHDR);
+
+    size_t size = header->phentsize * header->phnum;
+    GT_TRYTHIS(gt_buf_address(buf, header->phoff, size, (void**)out_phdr))
+    *out_num = header->phnum;
 
     return GT_ELF_OK;
+}
+
+int gt_elf32_get_sym_array(gt_buf* buf, gt_elf32_shdr* shdr, size_t* out_num, gt_elf32_sym** out_sym, gt_elf_shn* out_ndx)
+{
+    GT_TRYTHIS(gt_elf_assert_class(buf, GT_ELF_IDENT_CLASS_32));
+    GT_THROWIF(shdr == NULL, GT_ELF_INVALID_SHDR);
+    GT_THROWIF(shdr->type != GT_ELF_SHDR_TYPE_SYMTAB, GT_ELF_INVALID_SHDR);
+    GT_THROWIF(out_num == NULL, GT_ELF_INVALID_OUT);
+    GT_THROWIF(out_ndx == NULL, GT_ELF_INVALID_OUT);
+    GT_THROWIF(out_sym == NULL, GT_ELF_INVALID_OUT);
+    GT_THROWIF(*out_num != 0, GT_ELF_INVALID_OUT);
+    GT_THROWIF(*out_ndx != 0, GT_ELF_INVALID_OUT);
+    GT_THROWIF(*out_sym != NULL, GT_ELF_INVALID_OUT);
+    // gt_elf32_sym has an alignment of 4 bytes;
+    // should I expect that shdr->addralign must
+    // equal to 4 ?
+    //
+    // https://refspecs.linuxbase.org/elf/gabi4+/ch4.sheader.html
+    GT_THROWIF(shdr->addralign != _Alignof(gt_elf32_sym), GT_ELF_INVALID_SHDR);
+
+    void* sym = NULL;
+    GT_TRYTHIS(gt_buf_address(buf, shdr->offset, shdr->size, &sym));
+
+    *out_sym = sym;
+    *out_num = shdr->size / shdr->entsize;
+    *out_ndx = shdr->link;
+
+    return GT_ELF_OK;
+}
+
+int gt_elf32_get_shdr_segment(gt_buf* buf, gt_elf32_shdr* shdr, gt_buf* out_segment)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_phdr_segment(gt_buf* buf, gt_elf32_phdr* shdr, gt_buf* out_segment)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_sym_segment(gt_buf* buf, gt_elf32_sym* sym, gt_buf* out_segment)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_str_segment(gt_buf* buf, gt_elf32_shdr* shdr, gt_buf* out_segment)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_shdr_by_type(gt_buf* buf, gt_elf_shdr_type type, gt_elf32_shdr* prev, gt_elf32_shdr** out_shdr)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_phdr_by_type(gt_buf* buf, gt_elf_phdr_type type, gt_elf32_sym* prev, gt_elf32_sym** out_sym)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_sym_by_type(gt_buf* buf, gt_elf_sym_type type, gt_elf32_sym* prev, gt_elf32_sym** out_sym)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_shdr_by_name(gt_buf* buf, gt_buf* name, gt_elf32_shdr** out_shdr)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
+}
+
+int gt_elf32_get_sym_by_name(gt_buf* buf, gt_buf* name, gt_elf32_sym** out_sym)
+{
+    return GT_ELF_FAILURE_NOT_IMPLEMENTED;
 }

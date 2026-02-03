@@ -37,7 +37,7 @@ int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg)
     return GT_BUF_OK;
 }
 
-int gt_buf_effective(gt_buf* buf, size_t offset, size_t size, void** out)
+int gt_buf_address(gt_buf* buf, size_t offset, size_t size, void** out)
 {
     gt_buf seg = GT_BUF_ZEROED;
     GT_TRYTHIS(gt_buf_segment(buf, offset, size, &seg));

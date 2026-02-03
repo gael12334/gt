@@ -112,29 +112,29 @@ typedef struct {
  *************************/
 
 typedef enum : gt_elf_word {
-    GT_ELF_SHDR_IDENT_TYPE_NULL,
-    GT_ELF_SHDR_IDENT_TYPE_PROGBITS,
-    GT_ELF_SHDR_IDENT_TYPE_SYMTAB,
-    GT_ELF_SHDR_IDENT_TYPE_STRTAB,
-    GT_ELF_SHDR_IDENT_TYPE_RELA,
-    GT_ELF_SHDR_IDENT_TYPE_HASH,
-    GT_ELF_SHDR_IDENT_TYPE_DYNAMIC,
-    GT_ELF_SHDR_IDENT_TYPE_NOTE,
-    GT_ELF_SHDR_IDENT_TYPE_NOBITS,
-    GT_ELF_SHDR_IDENT_TYPE_REL,
-    GT_ELF_SHDR_IDENT_TYPE_SHLIB,
-    GT_ELF_SHDR_IDENT_TYPE_DYNSYM,
-    GT_ELF_SHDR_IDENT_TYPE_LOPROC = 0x70000000,
-    GT_ELF_SHDR_IDENT_TYPE_HIPROC = 0x7fffffff,
-    GT_ELF_SHDR_IDENT_TYPE_LOUSER = 0x80000000,
-    GT_ELF_SHDR_IDENT_TYPE_HIUSER = 0xffffffff
+    GT_ELF_SHDR_TYPE_NULL,
+    GT_ELF_SHDR_TYPE_PROGBITS,
+    GT_ELF_SHDR_TYPE_SYMTAB,
+    GT_ELF_SHDR_TYPE_STRTAB,
+    GT_ELF_SHDR_TYPE_RELA,
+    GT_ELF_SHDR_TYPE_HASH,
+    GT_ELF_SHDR_TYPE_DYNAMIC,
+    GT_ELF_SHDR_TYPE_NOTE,
+    GT_ELF_SHDR_TYPE_NOBITS,
+    GT_ELF_SHDR_TYPE_REL,
+    GT_ELF_SHDR_TYPE_SHLIB,
+    GT_ELF_SHDR_TYPE_DYNSYM,
+    GT_ELF_SHDR_TYPE_LOPROC = 0x70000000,
+    GT_ELF_SHDR_TYPE_HIPROC = 0x7fffffff,
+    GT_ELF_SHDR_TYPE_LOUSER = 0x80000000,
+    GT_ELF_SHDR_TYPE_HIUSER = 0xffffffff
 } gt_elf_shdr_type;
 
 typedef enum : gt_elf_word {
-    GT_ELF_SHDR_IDENT_FLAG_WRITE = 0x1,
-    GT_ELF_SHDR_IDENT_FLAG_ALLOC = 0x2,
-    GT_ELF_SHDR_IDENT_FLAG_EXECINSTR = 0x4,
-    GT_ELF_SHDR_IDENT_FLAG_MASKPROC = 0xf0000000
+    GT_ELF_SHDR_FLAG_WRITE = 0x1,
+    GT_ELF_SHDR_FLAG_ALLOC = 0x2,
+    GT_ELF_SHDR_FLAG_EXECINSTR = 0x4,
+    GT_ELF_SHDR_FLAG_MASKPROC = 0xf0000000
 } gt_elf_shdr_flag;
 
 typedef struct {
@@ -160,140 +160,93 @@ typedef struct {
  *     Symbol types
  *************************/
 
-typedef union {
-    gt_elf_byte info;
-    enum gt_elf_sym_binding : gt_elf_byte {
-        GT_ELF_SYM_INFO_BINDING_LOCAL = 0 << 4,
-        GT_ELF_SYM_INFO_BINDING_GLOBAL = 1 << 4,
-        GT_ELF_SYM_INFO_BINDING_WEAK = 2 << 4,
-        GT_ELF_SYM_INFO_BINDING_LOPROC = 13 << 4,
-        GT_ELF_SYM_INFO_BINDING_HIPROC = 15 << 4,
-        GT_ELF_SYM_INFO_BINDING_MASK = 0xf0,
-    } _b;
-    enum gt_elf_sym_type : gt_elf_byte {
-        GT_ELF_SYM_INFO_TYPE_NOTYPE = 0,
-        GT_ELF_SYM_INFO_TYPE_OBJECT = 1,
-        GT_ELF_SYM_INFO_TYPE_FUNC = 2,
-        GT_ELF_SYM_INFO_TYPE_SECTION = 3,
-        GT_ELF_SYM_INFO_TYPE_FILE = 4,
-        GT_ELF_SYM_INFO_TYPE_LOPROC = 13,
-        GT_ELF_SYM_INFO_TYPE_HIPROC = 15,
-        GT_ELF_SYM_INFO_TYPE_MASK = 0x0f
-    } _t;
-} gt_elf_sym_attr;
+typedef enum {
+    GT_ELF_SYM_BINDING_LOCAL = 0 << 4,
+    GT_ELF_SYM_BINDING_GLOBAL = 1 << 4,
+    GT_ELF_SYM_BINDING_WEAK = 2 << 4,
+    GT_ELF_SYM_BINDING_LOPROC = 13 << 4,
+    GT_ELF_SYM_BINDING_HIPROC = 15 << 4,
+    GT_ELF_SYM_BINDING_MASK = 0xf0,
+} gt_elf_sym_binding;
 
-typedef union {
-    gt_elf_byte other;
-    enum gt_elf_sym_visib_enum : gt_elf_byte {
-        GT_ELF_SYM_VISIB_ENUM_DEFAULT = 0,
-        GT_ELF_SYM_VISIB_ENUM_INTERNAL = 1,
-        GT_ELF_SYM_VISIB_ENUM_HIDDEN = 2,
-        GT_ELF_SYM_VISIB_ENUM_PROTECTED = 3,
-        GT_ELF_SYM_VISIB_ENUM_EXPORTED = 4
-    } _v;
+typedef enum {
+    GT_ELF_SYM_TYPE_NOTYPE = 0,
+    GT_ELF_SYM_TYPE_OBJECT = 1,
+    GT_ELF_SYM_TYPE_FUNC = 2,
+    GT_ELF_SYM_TYPE_SECTION = 3,
+    GT_ELF_SYM_TYPE_FILE = 4,
+    GT_ELF_SYM_TYPE_LOPROC = 13,
+    GT_ELF_SYM_TYPE_HIPROC = 15,
+    GT_ELF_SYM_TYPE_MASK = 0x0f
+} gt_elf_sym_type;
+
+typedef enum {
+    GT_ELF_SYM_VISIB_DEFAULT = 0,
+    GT_ELF_SYM_VISIB_INTERNAL = 1,
+    GT_ELF_SYM_VISIB_HIDDEN = 2,
+    GT_ELF_SYM_VISIB_PROTECTED = 3,
+    GT_ELF_SYM_VISIB_MASK = 0x03
 } gt_elf_sym_visib;
 
 typedef struct {
-    gt_elf_sym_attr  attr;
-    gt_elf_sym_visib visib;
-    gt_elf_shn       shndx;
-} gt_elf_sym_info;
-
-typedef struct {
-    gt_elf_word     name;
-    gt_elf32_addr   addr;
-    gt_elf_word     size;
-    gt_elf_sym_info info;
+    gt_elf_word   name;
+    gt_elf32_addr addr;
+    gt_elf_word   size;
+    gt_elf_byte   info;
+    gt_elf_byte   other;
+    gt_elf_shn    shndx;
 } gt_elf32_sym;
 
 typedef struct {
-    gt_elf_word     name;
-    gt_elf_sym_info info;
-    gt_elf64_addr   addr;
-    gt_elf_xword    size;
+    gt_elf_word   name;
+    gt_elf_byte   info;
+    gt_elf_byte   other;
+    gt_elf_shn    shndx;
+    gt_elf64_addr addr;
+    gt_elf_xword  size;
 } gt_elf64_sym;
 
 /*************************
  *  Program header types
  *************************/
 
-typedef union {
-    gt_elf_word type;
-    enum gt_elf_phdr_type_enum : gt_elf_word {
-        GT_ELF_PHDR_TYPE_ENUM_NULL,
-        GT_ELF_PHDR_TYPE_ENUM_LOAD,
-        GT_ELF_PHDR_TYPE_ENUM_DYNAMIC,
-        GT_ELF_PHDR_TYPE_ENUM_INTERP,
-        GT_ELF_PHDR_TYPE_ENUM_NOTE,
-        GT_ELF_PHDR_TYPE_ENUM_SHLIB,
-        GT_ELF_PHDR_TYPE_ENUM_PHDR,
-        GT_ELF_PHDR_TYPE_ENUM_TLS,
-        GT_ELF_PHDR_TYPE_ENUM_LOOS = 0x60000000,
-        GT_ELF_PHDR_TYPE_ENUM_HIOS = 0x6fffffff,
-        GT_ELF_PHDR_TYPE_ENUM_LOPROC = 0x70000000,
-        GT_ELF_PHDR_TYPE_ENUM_HIPROC = 0x7fffffff
-    } _t;
+typedef enum {
+    GT_ELF_PHDR_TYPE_ENUM_NULL,
+    GT_ELF_PHDR_TYPE_ENUM_LOAD,
+    GT_ELF_PHDR_TYPE_ENUM_DYNAMIC,
+    GT_ELF_PHDR_TYPE_ENUM_INTERP,
+    GT_ELF_PHDR_TYPE_ENUM_NOTE,
+    GT_ELF_PHDR_TYPE_ENUM_SHLIB,
+    GT_ELF_PHDR_TYPE_ENUM_PHDR,
+    GT_ELF_PHDR_TYPE_ENUM_TLS,
+    GT_ELF_PHDR_TYPE_ENUM_LOOS = 0x60000000,
+    GT_ELF_PHDR_TYPE_ENUM_HIOS = 0x6fffffff,
+    GT_ELF_PHDR_TYPE_ENUM_LOPROC = 0x70000000,
+    GT_ELF_PHDR_TYPE_ENUM_HIPROC = 0x7fffffff
 } gt_elf_phdr_type;
 
-typedef union {
-    gt_elf_word flags;
-    enum gt_elf_phdr_flag_enum : gt_elf_word {
-        GT_ELF_PHDR_FLAG_ENUM_X = 0x1,
-        GT_ELF_PHDR_FLAG_ENUM_W = 0x2,
-        GT_ELF_PHDR_FLAG_ENUM_R = 0x4,
-        GT_ELF_PHDR_FLAG_ENUM_MASKOS = 0X0ff00000,
-        GT_ELF_PHDR_FLAG_ENUM_MASKPROC = 0Xf0000000
-    } _f;
+typedef enum {
+    GT_ELF_PHDR_FLAG_ENUM_X = 0x1,
+    GT_ELF_PHDR_FLAG_ENUM_W = 0x2,
+    GT_ELF_PHDR_FLAG_ENUM_R = 0x4,
+    GT_ELF_PHDR_FLAG_ENUM_MASKOS = 0X0ff00000,
+    GT_ELF_PHDR_FLAG_ENUM_MASKPROC = 0Xf0000000
 } gt_elf_phdr_flags;
 
 typedef struct {
-    gt_elf_phdr_type  type;
-    gt_elf32_off      offset;
-    gt_elf32_addr     vaddr, paddr;
-    gt_elf_word       filesz, memsz;
-    gt_elf_phdr_flags flags;
-    gt_elf_word       align;
+    gt_elf_word   type;
+    gt_elf32_off  offset;
+    gt_elf32_addr vaddr, paddr;
+    gt_elf_word   filesz, memsz;
+    gt_elf_word   flags, align;
 } gt_elf32_phdr;
 
 typedef struct {
-    gt_elf_phdr_type  type;
-    gt_elf_phdr_flags flags;
-    gt_elf64_off      offset;
-    gt_elf64_addr     vaddr, paddr;
-    gt_elf_xword      filesz, memsz, align;
+    gt_elf_word   type, flags;
+    gt_elf64_off  offset;
+    gt_elf64_addr vaddr, paddr;
+    gt_elf_xword  filesz, memsz, align;
 } gt_elf64_phdr;
-
-/*************************
- *      ELF object
- *************************/
-
-typedef struct {
-    char*  addr;
-    size_t size;
-} gt_elf_strtab;
-
-typedef struct {
-    void** lookup;
-    size_t length;
-} gt_elf_shlookup;
-
-typedef struct {
-    gt_buf*         buffer;
-    gt_elf32_ehdr*  header;
-    gt_elf32_shdr*  sections;
-    gt_elf32_phdr*  programs;
-    gt_elf_strtab   shstrtab;
-    gt_elf_shlookup shlookup;
-} gt_elf32;
-
-typedef struct {
-    gt_buf*         buffer;
-    gt_elf64_ehdr*  header;
-    gt_elf64_shdr*  sections;
-    gt_elf64_phdr*  programs;
-    gt_elf_strtab   shstrtab;
-    gt_elf_shlookup shlookup;
-} gt_elf64;
 
 /*************************
  *   Module error code
@@ -305,38 +258,34 @@ typedef enum {
     GT_ELF_INVALID_OUT,
     GT_ELF_INVALID_NAME,
     GT_ELF_INVALID_EHDR,
+    GT_ELF_INVALID_SHDR,
     GT_ELF_INVALID_SIZE,
     GT_ELF_INVALID_CLASS,
+    GT_ELF_INVALID_MAGIC,
     GT_ELF_INVALID_LOOKUP,
+    GT_ELF_FAILURE_MALLOC,
+    GT_ELF_FAILURE_LOADED,
     GT_ELF_INVALID_SHSTRNDX,
     GT_ELF_INVALID_SHSTRTAB,
-    GT_ELF_FAILURE_LOADED,
     GT_ELF_FAILURE_UNLOADED,
-    GT_ELF_FAILURE_MALLOC,
+    GT_ELF_FAILURE_NOT_IMPLEMENTED,
 } gt_elf_result;
 
 /*************************
- *   Module constants
+ * Module 32 bit functions
  *************************/
 
-typedef enum {
-    GT_ELF_UNLOADED = 0,
-    GT_ELF_LOADED = 1,
-} gt_elf_const;
-
-/*************************
- *    32 bit Functions
- *************************/
-
-int gt_elf32_load(gt_buf* buf, gt_elf32* out);
-int gt_elf32_unload(gt_elf32* elf);
-int gt_elf32_shnum(gt_elf32* elf, size_t* out);
-
-/*
-
-
-
-
-
-
-*/
+int gt_elf_get_ident(gt_buf* buf, gt_elf_ident** out_ident);
+int gt_elf32_get_header(gt_buf* buf, gt_elf32_ehdr** out_ehdr);
+int gt_elf32_get_shdr_array(gt_buf* buf, size_t* out_num, gt_elf32_shdr** out_shdr);
+int gt_elf32_get_phdr_array(gt_buf* buf, size_t* out_num, gt_elf32_phdr** out_phdr);
+int gt_elf32_get_sym_array(gt_buf* buf, gt_elf32_shdr* shdr, size_t* out_num, gt_elf32_sym** out_sym, gt_elf_shn* out_ndx);
+int gt_elf32_get_shdr_segment(gt_buf* buf, gt_elf32_shdr* shdr, gt_buf* out_segment);
+int gt_elf32_get_phdr_segment(gt_buf* buf, gt_elf32_phdr* shdr, gt_buf* out_segment);
+int gt_elf32_get_sym_segment(gt_buf* buf, gt_elf32_sym* sym, gt_buf* out_segment);
+int gt_elf32_get_str_segment(gt_buf* buf, gt_elf32_shdr* shdr, gt_buf* out_segment);
+int gt_elf32_get_shdr_by_type(gt_buf* buf, gt_elf_shdr_type type, gt_elf32_shdr* prev, gt_elf32_shdr** out_shdr);
+int gt_elf32_get_phdr_by_type(gt_buf* buf, gt_elf_phdr_type type, gt_elf32_sym* prev, gt_elf32_sym** out_sym);
+int gt_elf32_get_sym_by_type(gt_buf* buf, gt_elf_sym_type type, gt_elf32_sym* prev, gt_elf32_sym** out_sym);
+int gt_elf32_get_shdr_by_name(gt_buf* buf, gt_buf* name, gt_elf32_shdr** out_shdr);
+int gt_elf32_get_sym_by_name(gt_buf* buf, gt_buf* name, gt_elf32_sym** out_sym);
