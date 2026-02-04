@@ -6,6 +6,11 @@ Copyright © 2026 Gaël Fortier
 
 <gael.fortier.1@ens.etsmtl.ca>
 
+## Note
+
+The main branch will be updated once changes are completed on the "workspace" branch. 
+Current workspace branch: https://github.com/gael12334/gt/tree/refactor-28Jan26
+
 ## Disclaimer
 
 This is a work in progress. 
