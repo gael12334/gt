@@ -155,3 +155,26 @@ int gt_buf_equals(gt_buf* buf1, gt_buf* buf2, int* out)
     *out = equals;
     return GT_BUF_OK;
 }
+
+int gt_buf_zeroed(gt_buf* buf, int* out)
+{
+    GT_THROWIF(buf == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
+    GT_THROWIF(out == NULL, GT_BUF_INVALID_OUT);
+
+    uint64_t  index = 0;
+    uint64_t  zeroed = 1;
+    uint64_t* bucket = buf->data;
+    while (zeroed && index < buf->size) {
+        uint64_t next = index + sizeof(uint64_t);
+        uint64_t over = (next - buf->size) * (next > buf->size);
+        uint64_t mask = UINT64_MAX >> (over * 8);
+        uint64_t val = *bucket & mask;
+        zeroed &= (val == 0);
+        index = next - over;
+        bucket++;
+    }
+
+    *out = zeroed;
+    return GT_BUF_OK;
+}

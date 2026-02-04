@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "errors.h"
 #include <elf.h>
 #include <linux/limits.h>
 #include <stddef.h>
@@ -12,15 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "errors.h"
-
 typedef const uint8_t elf_cub8;
-typedef elf_cub8* elf_pcub8;
-typedef uint8_t elf_ub8;
-typedef elf_ub8* elf_pub8;
+typedef elf_cub8*     elf_pcub8;
+typedef uint8_t       elf_ub8;
+typedef elf_ub8*      elf_pub8;
 
 typedef struct elf_index_iterator {
-    void* object;
+    void*    object;
     uint64_t index;
     uint64_t done;
 } elf_index_iterator;
