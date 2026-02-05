@@ -19,7 +19,7 @@ This is intended to be used for my own personal projects and as a portfolio.
 
 Do not use this in a professional setting. 
 
-Do not sell, distribute or copy. 
+Do not sell, distribute, modify or copy. 
 
 It works on my machine, but you should not expect that it works on yours. It is likely going to SEGFAULT somewhere. 
 
