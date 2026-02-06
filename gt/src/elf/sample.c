@@ -1,3 +1,7 @@
+/*
+ *  Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
+ */
+
 #include <stdio.h>
 
 void print_args(int argc, char** argv)
