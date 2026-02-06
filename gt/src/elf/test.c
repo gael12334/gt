@@ -229,6 +229,8 @@ static void test_gt_elf32_get_sym_segment(void)
     //     printf("wrong addr\n");
     // else
     //     printf("ok\n");
+    
+    unload_ELF();
 }
 
 int main(int argc, char** argv)
