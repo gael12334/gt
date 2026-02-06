@@ -1,8 +1,9 @@
 pkg/
-*/cache/
-*/output/
-*/backup/
+**/cache/
+**/output/
+**/backup/
+**/out
 *.o
-*.out
+*.elf
 *.bin
-*.test.c.kate-swp
+*.a
