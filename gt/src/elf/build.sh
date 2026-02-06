@@ -42,7 +42,17 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-gcc -o out/elf.o elf.c -c -ggdb -L/usr/lib -I/usr/include
+build_dependency ../file build.sh file.o
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
+build_dependency ../heap build.sh heap.o
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
+gcc -o out/elf.o $(find impl -name "*.c" -print) -r -ggdb -L/usr/lib -I/usr/include
 if [ $? -ne 0 ]; then
     exit 1
 fi

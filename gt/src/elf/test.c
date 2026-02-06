@@ -2,193 +2,246 @@
  *  Copyright (c) 2026 Gaël Fortier <gael.fortier.1@ens.etsmtl.ca>
  */
 
+#include "../file/file.h"
 #include "elf.h"
 #include <stdio.h>
 
-static uint8_t ELF_RO_MAGIC[4] = {
-    0x7f,
-    'E',
-    'L',
-    'F'
-};
+static uint8_t MAGIC[] = { 0x7f, 'E', 'L', 'F' };
+static gt_buf  ELF = GT_BUF_ZEROED;
 
-#define DEFAULT_NUM (5)
-static struct {
-    gt_elf32_ehdr ehdr;
-    gt_elf32_shdr shdr[DEFAULT_NUM];
-    gt_elf32_phdr phdr[DEFAULT_NUM];
-    gt_elf32_sym  sym[DEFAULT_NUM];
-} ELF_RO_SAMPLE = { 0 };
-
-static void init_elf_ro_sample(void)
+static void load_ELF(void)
 {
-    gt_elf32_ehdr* ehdr = &ELF_RO_SAMPLE.ehdr;
-    ehdr->ehsize = sizeof(*ehdr);
-    ehdr->machine = 1;
-    ehdr->entry = 1;
-    ehdr->ident.clazz = GT_ELF_IDENT_CLASS_32;
-    ehdr->shentsize = sizeof(gt_elf32_shdr);
-    ehdr->shoff = (void*)&ELF_RO_SAMPLE.shdr[0] - (void*)&ELF_RO_SAMPLE;
-    ehdr->shnum = DEFAULT_NUM;
-    ehdr->phentsize = sizeof(gt_elf32_phdr);
-    ehdr->phoff = (void*)&ELF_RO_SAMPLE.phdr[0] - (void*)&ELF_RO_SAMPLE;
-    ehdr->phnum = DEFAULT_NUM;
-    ehdr->ident.magic[0] = 0x7f;
-    ehdr->ident.magic[1] = 'E';
-    ehdr->ident.magic[2] = 'L';
-    ehdr->ident.magic[3] = 'F';
-
-    gt_elf32_shdr* shdr = &ELF_RO_SAMPLE.shdr[0];
-    shdr->addr = (void*)&ELF_RO_SAMPLE.sym[0] - (void*)&ELF_RO_SAMPLE;
-    shdr->entsize = sizeof(gt_elf32_sym);
-
-    // TODO : to complete.
-}
-
-void test_gt_elf_get_ident(void)
-{
-    // arrange
-    gt_elf_ident* result = NULL;
-    gt_elf_ident  ident = { 0 };
-    gt_buf        buf = { .data = &ident, .size = sizeof(ident) };
-
-    ident.clazz = GT_ELF_IDENT_CLASS_32;
-    ident.data = GT_ELF_IDENT_DATA_2LSB;
-
-    // act
-    int code = gt_elf_get_ident(&buf, &result);
-
-    // assert
-    if (code) {
-        printf("code was %i\n", code);
-    } else if (memcmp(&ident, result, sizeof(ident)) != 0) {
-        printf("ident and result where different\n");
-    } else {
-        printf("ok\n");
+    ELF = GT_BUF_ZEROED;
+    if (gt_file_load("out/sample.bin", &ELF)) {
+        printf("'out/sample.bin' is absent\n");
+        exit(-1);
     }
 }
 
-void test_gt_elf32_get_header(void)
+static void unload_ELF(void)
 {
-    // arrange
-    gt_elf32_ehdr* result = NULL;
-    gt_elf32_ehdr  ehdr = { 0 };
-    gt_buf         buf = { .data = &ehdr, .size = sizeof(ehdr) };
-    uint8_t        magic[4] = { 0x7f, 'E', 'L', 'F' };
-
-    ehdr.ehsize = sizeof(ehdr);
-    ehdr.machine = 1;
-    ehdr.entry = 1;
-    memcpy(ehdr.ident.magic, magic, sizeof(magic));
-    ehdr.ident.clazz = GT_ELF_IDENT_CLASS_32;
-
-    // act
-    int code = gt_elf32_get_header(&buf, &result);
-
-    // assert
-    if (code) {
-        printf("code was %i\n", code);
-    } else if (memcmp(&ehdr, result, sizeof(ehdr)) != 0) {
-        printf("ident and result where different\n");
-    } else {
-        printf("ok\n");
+    if (gt_file_unload(&ELF)) {
+        printf("error while unloading file\n");
+        exit(-1);
     }
 }
 
-void test_gt_elf32_get_shdr_array(void)
+static void test_gt_elf_get_ident(void)
 {
     // arrange
-    struct {
-        gt_elf32_ehdr ehdr;
-        gt_elf32_shdr shdr[1];
-    } elf = { 0 };
-
-    gt_buf  buf = { .data = &elf, .size = sizeof(elf) };
-    uint8_t magic[4] = { 0x7f, 'E', 'L', 'F' };
-
-    elf.ehdr.ehsize = sizeof(elf.ehdr);
-    elf.ehdr.machine = 1;
-    elf.ehdr.entry = 1;
-    memcpy(elf.ehdr.ident.magic, magic, sizeof(magic));
-    elf.ehdr.ident.clazz = GT_ELF_IDENT_CLASS_32;
-    elf.ehdr.shentsize = sizeof(elf.shdr[0]);
-    elf.ehdr.shoff = (void*)&elf.shdr[0] - (void*)&elf.ehdr;
-    elf.ehdr.shnum = 1;
+    load_ELF();
+    gt_elf_ident* ident = NULL;
 
     // act
+    int result = gt_elf_get_ident(&ELF, &ident);
+
+    // assert
+    if (result)
+        printf("result was %i\n", result);
+    else if (ident->clazz != GT_ELF_IDENT_CLASS_32)
+        printf("ident->clazz was %hhu\n", ident->clazz);
+    else if (ident->data != GT_ELF_IDENT_DATA_2LSB)
+        printf("ident->data was %hhu\n", ident->clazz);
+    else if (memcmp(ident->magic, MAGIC, sizeof(ident->magic)) != 0)
+        printf("ident->data was %hhu %c %c %c\n", ident->magic[0], ident->magic[1], ident->magic[2], ident->magic[3]);
+    else
+        printf("ok\n");
+
+    unload_ELF();
+}
+
+static void test_gt_elf32_get_header(void)
+{
+    // Reference:
+    // https://llvm.org/doxygen/namespacellvm_1_1ELF.html
+#define ELF_EM_386 (3)
+
+    // arrange
+    load_ELF();
+    gt_elf32_ehdr* ehdr = NULL;
+
+    // act
+    int result = gt_elf32_get_header(&ELF, &ehdr);
+
+    // assert
+    if (result)
+        printf("result was %i\n", result);
+    else if (ehdr->ehsize != sizeof(gt_elf32_ehdr))
+        printf("ehdr->ehsize was %hu\n", ehdr->ehsize);
+    else if (ehdr->machine != ELF_EM_386)
+        printf("machine was not ELF_EM_386\n");
+    else
+        printf("ok\n");
+
+#undef ELF_EM_386
+    unload_ELF();
+}
+
+static void test_gt_elf32_get_shdr_array(void)
+{
+    // arrange
+    load_ELF();
     gt_elf32_shdr* shdr = NULL;
     size_t         num = 0;
-    int            code = gt_elf32_get_shdr_array(&buf, &num, &shdr);
-
-    // assert
-    if (code) {
-        gt_trace_point tp = { 0 };
-        gt_trace_get_level(0, &tp);
-        printf("code was %i\n", code);
-        printf("  file: %s\n", tp.location.file);
-        printf("  line: %i\n", tp.location.line);
-    } else if (shdr == NULL) {
-        printf("shdr was NULL\n");
-    } else if (num == 0) {
-        printf("num was zero\n");
-    } else if (shdr != &elf.shdr[0]) {
-        printf("shdr was %p; expected %p\n", shdr, &elf.shdr[0]);
-    } else {
-        printf("ok\n");
-    }
-}
-
-void test_gt_elf32_get_phdr_array(void)
-{
-    // arrange
-    struct {
-        gt_elf32_ehdr ehdr;
-        gt_elf32_phdr phdr[1];
-    } elf = { 0 };
-
-    gt_buf buf = { .data = &elf, .size = sizeof(elf) };
-
-    elf.ehdr.ehsize = sizeof(elf.ehdr);
-    elf.ehdr.machine = 1;
-    elf.ehdr.entry = 1;
-    memcpy(elf.ehdr.ident.magic, ELF_RO_MAGIC, sizeof(ELF_RO_MAGIC));
-    elf.ehdr.ident.clazz = GT_ELF_IDENT_CLASS_32;
-    elf.ehdr.phentsize = sizeof(elf.phdr[0]);
-    elf.ehdr.phoff = (void*)&elf.phdr[0] - (void*)&elf.ehdr;
-    elf.ehdr.phnum = 1;
 
     // act
-    gt_elf32_phdr* phdr = NULL;
-    size_t         num = 0;
-    int            code = gt_elf32_get_phdr_array(&buf, &num, &phdr);
+    int result = gt_elf32_get_shdr_array(&ELF, &num, &shdr);
 
     // assert
-    if (code) {
-        gt_trace_point tp = { 0 };
-        gt_trace_get_level(0, &tp);
-        printf("code was %i\n", code);
-        printf("  file: %s\n", tp.location.file);
-        printf("  line: %i\n", tp.location.line);
-    } else if (phdr == NULL) {
-        printf("phdr was NULL\n");
-    } else if (num == 0) {
-        printf("num was zero\n");
-    } else if (phdr != &elf.phdr[0]) {
-        printf("shdr was %p; expected %p\n", phdr, &elf.phdr[0]);
-    } else {
+    if (result)
+        printf("result was %i\n", result);
+    else if (num != 35)
+        printf("num was %zu\n", num);
+    else if (shdr == NULL)
+        printf("shdr was null\n");
+    else
         printf("ok\n");
-    }
+
+    unload_ELF();
 }
 
-void test_gt_elf32_get_sym_array(void)
+static void test_gt_elf32_get_shdr_by_type(void)
 {
+    // arrange
+    load_ELF();
+    gt_elf32_shdr* shdr_sym = NULL;
+    gt_elf32_shdr* shdr_str = NULL;
+
+    // act
+    int result1 = gt_elf32_get_shdr_by_type(&ELF, GT_ELF_SHDR_TYPE_SYMTAB, NULL, &shdr_sym);
+    int result2 = gt_elf32_get_shdr_by_type(&ELF, GT_ELF_SHDR_TYPE_STRTAB, shdr_sym, &shdr_str);
+
+    // assert
+    if (result1)
+        printf("result1 was %i\n", result1);
+    else if (result2)
+        printf("result2 was %i\n", result2);
+    else if (shdr_sym == NULL)
+        printf("shdr_sym null\n");
+    else if (shdr_str == NULL)
+        printf("shdr_str null\n");
+    else if (shdr_sym->type != GT_ELF_SHDR_TYPE_SYMTAB)
+        printf("shdr_sym->type %u\n", shdr_sym->type);
+    else
+        printf("ok\n");
+
+    unload_ELF();
+}
+
+static void test_gt_elf32_get_phdr_array(void)
+{
+    // arrange
+    load_ELF();
+    gt_elf32_phdr* phdr = NULL;
+    size_t         num = 0;
+
+    // act
+    int result = gt_elf32_get_phdr_array(&ELF, &num, &phdr);
+
+    // assert
+    if (result)
+        printf("result was %i\n", result);
+    else if (num != 11)
+        printf("num was %zu\n", num);
+    else if (phdr == NULL)
+        printf("phdr was null\n");
+    else
+        printf("ok\n");
+
+    unload_ELF();
+}
+
+static void test_gt_elf32_get_sym_array(void)
+{
+    // arrange
+    load_ELF();
+    gt_elf32_shdr* shdr = NULL;
+    gt_elf32_sym*  sym = NULL;
+    size_t         num = 0;
+    gt_elf32_get_shdr_by_type(&ELF, GT_ELF_SHDR_TYPE_SYMTAB, NULL, &shdr);
+
+    // act
+    int result = gt_elf32_get_sym_array(&ELF, shdr, &num, &sym);
+
+    // assert
+    if (result)
+        printf("result was %i\n", result);
+    else if (sym->name != 0) // first symbol entry is a 'null' symbol
+        printf("sym had a name\n");
+    else if (sym->addr != 0)
+        printf("addr was not null\n");
+    else
+        printf("ok\n");
+
+    unload_ELF();
+}
+
+static void test_gt_elf32_get_shdr_segment(void)
+{
+    // arrange
+    load_ELF();
+    gt_elf32_shdr* shdr = NULL;
+    gt_elf32_sym*  sym = NULL;
+    gt_buf         seg = GT_BUF_ZEROED;
+    size_t         num = 0;
+    gt_elf32_get_shdr_by_type(&ELF, GT_ELF_SHDR_TYPE_SYMTAB, NULL, &shdr);
+
+    // act
+    int result = gt_elf32_get_shdr_segment(&ELF, shdr, &seg);
+
+    // assert
+    sym = seg.data;
+    if (result)
+        printf("result was %i\n", result);
+    else if (seg.size != shdr->size)
+        printf("size was %zu\n", seg.size);
+    else if (sym->addr != 0)
+        printf("wrong addr\n");
+    else
+        printf("ok\n");
+}
+
+static void test_gt_elf32_get_sym_segment(void)
+{
+    // arrange
+    load_ELF();
+    gt_elf32_shdr* shdr = NULL;
+    gt_elf32_sym*  sym = NULL;
+    gt_buf         seg = GT_BUF_ZEROED;
+    size_t         num = 0;
+    gt_elf32_get_shdr_by_type(&ELF, GT_ELF_SHDR_TYPE_SYMTAB, NULL, &shdr);
+    gt_elf32_get_sym_array(&ELF, shdr, &num, &sym);
+
+    printf("%zu\n", num);
+    int i = 35;
+    gt_elf32_print_sym(&sym[i]);
+
+    // // act
+    // int result = gt_elf32_get_shdr_segment(&ELF, shdr, &seg);
+    //
+    // // assert
+    // sym = seg.data;
+    // if (result)
+    //     printf("result was %i\n", result);
+    // else if (seg.size != shdr->size)
+    //     printf("size was %zu\n", seg.size);
+    // else if (sym->addr != 0)
+    //     printf("wrong addr\n");
+    // else
+    //     printf("ok\n");
 }
 
 int main(int argc, char** argv)
 {
+
     test_gt_elf_get_ident();
     test_gt_elf32_get_header();
     test_gt_elf32_get_shdr_array();
+    test_gt_elf32_get_shdr_by_type();
+    test_gt_elf32_get_shdr_segment();
     test_gt_elf32_get_phdr_array();
+    test_gt_elf32_get_sym_array();
+    test_gt_elf32_get_sym_segment();
+
     return 0;
 }

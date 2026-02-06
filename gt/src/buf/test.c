@@ -177,6 +177,44 @@ void test_gt_buf_equals(void)
         printf("ok\n");
 }
 
+void test_gt_buf_zeroed(void)
+{
+    // arrange
+    char   data[10] = { 0 };
+    gt_buf buf = { .data = data, .size = sizeof(data) };
+
+    // act
+    int zeroed = 0;
+    int result = gt_buf_zeroed(&buf, &zeroed);
+
+    // assert
+    if (result != GT_BUF_OK)
+        printf("result was %i\n", result);
+    else if (zeroed == 0)
+        printf("zeroed was %i\n", zeroed);
+    else
+        printf("ok\n");
+}
+
+void test_gt_buf_zeroed_failed(void)
+{
+    // arrange
+    char   data[10] = "\0\0\0\0\0\0\0a";
+    gt_buf buf = { .data = data, .size = sizeof(data) };
+
+    // act
+    int zeroed = 0;
+    int result = gt_buf_zeroed(&buf, &zeroed);
+
+    // assert
+    if (result != GT_BUF_OK)
+        printf("result was %i\n", result);
+    else if (zeroed == 1)
+        printf("zeroed was %i\n", zeroed);
+    else
+        printf("ok\n");
+}
+
 int main(int argc, char** argv)
 {
     test_gt_buf_init();
@@ -188,5 +226,7 @@ int main(int argc, char** argv)
     test_gt_buf_data();
     test_gt_buf_size();
     test_gt_buf_equals();
+    test_gt_buf_zeroed();
+    test_gt_buf_zeroed_failed();
     return 0;
 }

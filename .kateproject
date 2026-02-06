@@ -3,7 +3,7 @@
     "files":
     [
         {
-            "directory": "kate",
+            "directory": ".",
             "filters":
             [
                 "*.cpp",
@@ -14,4 +14,5 @@
             "recursive": 1
         }
     ]
+
 }

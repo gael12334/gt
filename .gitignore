@@ -2,4 +2,7 @@ pkg/
 */cache/
 */output/
 */backup/
-
+*.o
+*.out
+*.bin
+*.test.c.kate-swp

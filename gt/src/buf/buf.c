@@ -31,9 +31,7 @@ int gt_buf_segment(gt_buf* buf, size_t offset, size_t size, gt_buf* out_seg)
     GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
     GT_THROWIF(offset + size > buf->size, GT_BUF_FAILURE_SEGFAULT);
 
-    if (gt_buf_init(size, buf->data + offset, out_seg))
-        return gt_trace_foward(GT_HERE);
-
+    GT_TRYTHIS(gt_buf_init(size, buf->data + offset, out_seg));
     return GT_BUF_OK;
 }
 
@@ -59,10 +57,8 @@ int gt_buf_write(gt_buf* buf, size_t size, const void* data)
 int gt_buf_writeat(gt_buf* buf, size_t offset, size_t size, const void* data)
 {
     gt_buf seg = GT_BUF_ZEROED;
-    if (gt_buf_segment(buf, offset, size, &seg))
-        return gt_trace_foward(GT_HERE);
-    if (gt_buf_write(&seg, size, data))
-        return gt_trace_foward(GT_HERE);
+    GT_TRYTHIS(gt_buf_segment(buf, offset, size, &seg));
+    GT_TRYTHIS(gt_buf_write(&seg, size, data));
     return GT_BUF_OK;
 }
 
@@ -80,10 +76,8 @@ int gt_buf_read(gt_buf* buf, size_t size, void* data)
 int gt_buf_readat(gt_buf* buf, size_t offset, size_t size, void* data)
 {
     gt_buf seg = GT_BUF_ZEROED;
-    if (gt_buf_segment(buf, offset, size, &seg))
-        return gt_trace_foward(GT_HERE);
-    if (gt_buf_read(&seg, size, data))
-        return gt_trace_foward(GT_HERE);
+    GT_TRYTHIS(gt_buf_segment(buf, offset, size, &seg));
+    GT_TRYTHIS(gt_buf_read(&seg, size, data));
     return GT_BUF_OK;
 }
 
@@ -127,13 +121,32 @@ int gt_buf_size(gt_buf* buf, size_t* out_size)
     *out_size = buf->size;
     return GT_BUF_OK;
 }
-#include <stdio.h>
+
+static void gt_buf_bytemask(uint64_t* ref_index, uint64_t* ref_mask, uint64_t size)
+{
+#define BIT_PER_BYTE (8UL)
+    uint64_t next;
+    uint64_t over;
+    uint64_t mask;
+    uint64_t bits;
+
+    next = (*ref_index) + sizeof(uint64_t);
+    over = (next - size) * (next > size);
+    bits = over * BIT_PER_BYTE;
+    mask = UINT64_MAX >> bits;
+
+    (*ref_index) += (next - over);
+    (*ref_mask) = mask;
+#undef BIT_PER_BYTE
+}
+
 int gt_buf_equals(gt_buf* buf1, gt_buf* buf2, int* out)
 {
     GT_THROWIF(buf1 == NULL, GT_BUF_INVALID_BUF);
     GT_THROWIF(buf1->data == NULL, GT_BUF_INVALID_BUF);
     GT_THROWIF(out == NULL, GT_BUF_INVALID_OUT);
 
+    uint64_t  mask = 0;
     uint64_t  index = 0;
     uint64_t  equals = 1;
     uint64_t* bucket1 = buf1->data;
@@ -141,13 +154,14 @@ int gt_buf_equals(gt_buf* buf1, gt_buf* buf2, int* out)
 
     equals = (buf1->size == buf2->size);
     while (equals && index < buf1->size) {
-        uint64_t next = index + sizeof(uint64_t);
-        uint64_t over = (next - buf1->size) * (next > buf1->size);
-        uint64_t mask = UINT64_MAX >> (over * 8);
-        uint64_t val1 = *bucket1 & mask;
-        uint64_t val2 = *bucket2 & mask;
+        // uint64_t next = index + sizeof(uint64_t);
+        // uint64_t over = (next - buf1->size) * (next > buf1->size);
+        // uint64_t mask = UINT64_MAX >> (over * 8);
+        // index = next - over;
+        gt_buf_bytemask(&index, &mask, buf1->size);
+        uint64_t val1 = (*bucket1) & mask;
+        uint64_t val2 = (*bucket2) & mask;
         equals &= (val1 == val2);
-        index = next - over;
         bucket1++;
         bucket2++;
     }
@@ -162,16 +176,19 @@ int gt_buf_zeroed(gt_buf* buf, int* out)
     GT_THROWIF(buf->data == NULL, GT_BUF_INVALID_BUF);
     GT_THROWIF(out == NULL, GT_BUF_INVALID_OUT);
 
+    uint64_t  mask = 0;
     uint64_t  index = 0;
     uint64_t  zeroed = 1;
     uint64_t* bucket = buf->data;
+
     while (zeroed && index < buf->size) {
-        uint64_t next = index + sizeof(uint64_t);
-        uint64_t over = (next - buf->size) * (next > buf->size);
-        uint64_t mask = UINT64_MAX >> (over * 8);
+        // uint64_t next = index + sizeof(uint64_t);
+        // uint64_t over = (next - buf->size) * (next > buf->size);
+        // uint64_t mask = UINT64_MAX >> (over * 8);
+        // index = next - over;
+        gt_buf_bytemask(&index, &mask, buf->size);
         uint64_t val = *bucket & mask;
         zeroed &= (val == 0);
-        index = next - over;
         bucket++;
     }
 

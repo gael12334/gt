@@ -8,12 +8,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# sample ELF file used by unit tests
-gcc -o out/sample.bin sample.c -ggdb -m32
-if [ $? -ne 0 ]; then
-    exit 1
-fi
-
 gcc -o out/test.bin test.c $(find out -name "*.o" -print) -ggdb -L/usr/lib -I/usr/include
 if [ $? -ne 0 ]; then
     exit 1
