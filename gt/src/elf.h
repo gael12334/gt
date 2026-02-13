@@ -14,14 +14,14 @@
 #include <string.h>
 
 typedef const uint8_t elf_cub8;
-typedef elf_cub8*     elf_pcub8;
-typedef uint8_t       elf_ub8;
-typedef elf_ub8*      elf_pub8;
+typedef elf_cub8* elf_pcub8;
+typedef uint8_t elf_ub8;
+typedef elf_ub8* elf_pub8;
 
 typedef struct elf_index_iterator {
-    void*    object;
-    uint64_t index;
-    uint64_t done;
+  void* object;
+  uint64_t index;
+  uint64_t done;
 } elf_index_iterator;
 
 int elf_reset_index_iterator(elf_index_iterator* iterator_ref);
@@ -78,7 +78,8 @@ int elf_get_sym_windex(Elf64_Shdr* sym_sh, size_t index, Elf64_Sym** sym_ref);
 
 int elf_get_sym_wname(Elf64_Shdr* sym_sh, const char* name, Elf64_Sym** sym_ref);
 
-int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type, elf_index_iterator* iterator_ref);
+int elf_get_sym_wtype(Elf64_Shdr* sym_sh, uint16_t type,
+                      elf_index_iterator* iterator_ref);
 
 int elf_get_sym_offset(Elf64_Sym* sym, size_t* offset_ref);
 
@@ -96,26 +97,25 @@ int elf_print_sym_shdr(Elf64_Shdr* sym_sh);
 
 #define elf_newl(x, ...) printf(x "\n", __VA_ARGS__)
 
-#define elf_gnewl(format, x, z, d) \
-    printf("%-30s %-12zu " format "\n", x, z, d)
+#define elf_gnewl(format, x, z, d) printf("%-30s %-12zu " format "\n", x, z, d)
 
-#define elf_unewl(x) _Generic((x),                             \
-    uint8_t: elf_gnewl("%-12hhu", #x, sizeof(x), (uint8_t)x),  \
-    uint16_t: elf_gnewl("%-12hu", #x, sizeof(x), (uint16_t)x), \
-    uint32_t: elf_gnewl("%-12u", #x, sizeof(x), (uint32_t)x),  \
-    uint64_t: elf_gnewl("%-12lu", #x, sizeof(x), (uint64_t)x))
+#define elf_unewl(x)                                                                     \
+  _Generic((x),                                                                          \
+      uint8_t: elf_gnewl("%-12hhu", #x, sizeof(x), (uint8_t)x),                          \
+      uint16_t: elf_gnewl("%-12hu", #x, sizeof(x), (uint16_t)x),                         \
+      uint32_t: elf_gnewl("%-12u", #x, sizeof(x), (uint32_t)x),                          \
+      uint64_t: elf_gnewl("%-12lu", #x, sizeof(x), (uint64_t)x))
 
-#define elf_inewl(x) _Generic((x),                            \
-    uint8_t: elf_gnewl("%-12hhi", #x, sizeof(x), (int8_t)x),  \
-    uint16_t: elf_gnewl("%-12hi", #x, sizeof(x), (int16_t)x), \
-    uint32_t: elf_gnewl("%-12i", #x, sizeof(x), (int32_t)x),  \
-    uint64_t: elf_gnewl("%-12li", #x, sizeof(x), (int64_t)x))
+#define elf_inewl(x)                                                                     \
+  _Generic((x),                                                                          \
+      uint8_t: elf_gnewl("%-12hhi", #x, sizeof(x), (int8_t)x),                           \
+      uint16_t: elf_gnewl("%-12hi", #x, sizeof(x), (int16_t)x),                          \
+      uint32_t: elf_gnewl("%-12i", #x, sizeof(x), (int32_t)x),                           \
+      uint64_t: elf_gnewl("%-12li", #x, sizeof(x), (int64_t)x))
 
-#define elf_pnewl(x) \
-    elf_gnewl("%-12p", #x, sizeof(x), x)
+#define elf_pnewl(x) elf_gnewl("%-12p", #x, sizeof(x), x)
 
-#define elf_snewl(x, n) \
-    elf_gnewl("%-12s", #x, (size_t)n, x)
+#define elf_snewl(x, n) elf_gnewl("%-12s", #x, (size_t)n, x)
 
 void elf_impl_bnewl(const char* expr, uint8_t* buff, size_t size);
 #define elf_bnewl(x, n) elf_impl_bnewl(#x, x, n)

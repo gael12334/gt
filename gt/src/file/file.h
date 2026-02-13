@@ -13,11 +13,11 @@
 #include <string.h>
 
 typedef enum {
-    GT_FILE_OK,
-    GT_FILE_INVALID_PATH,
-    GT_FILE_INVALID_OUT,
-    GT_FILE_FAILURE_FOPEN,
-    GT_FILE_FAILURE_MALLOC,
+  GT_FILE_OK,
+  GT_FILE_INVALID_PATH,
+  GT_FILE_INVALID_OUT,
+  GT_FILE_FAILURE_FOPEN,
+  GT_FILE_FAILURE_MALLOC,
 } gt_file_result;
 
 int gt_file_unload(gt_buf* file);

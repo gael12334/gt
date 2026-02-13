@@ -7,25 +7,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define GT_BUF_ZEROED \
-    (gt_buf) { 0 }
+#define GT_BUF_ZEROED                                                                    \
+  (gt_buf) {                                                                             \
+    0                                                                                    \
+  }
 
 typedef enum {
-    GT_BUF_OK,
-    GT_BUF_INVALID_DATA,
-    GT_BUF_INVALID_SIZE,
-    GT_BUF_INVALID_OUT,
-    GT_BUF_INVALID_OFFSET,
-    GT_BUF_INVALID_BUF,
-    GT_BUF_INVALID_SEG,
-    GT_BUF_FAILURE_SEGFAULT,
-    GT_BUF_FAILURE_UNZEROED,
-    GT_BUF_RESULTS_TOOSMALL,
+  GT_BUF_OK,
+  GT_BUF_INVALID_DATA,
+  GT_BUF_INVALID_SIZE,
+  GT_BUF_INVALID_OUT,
+  GT_BUF_INVALID_OFFSET,
+  GT_BUF_INVALID_BUF,
+  GT_BUF_INVALID_SEG,
+  GT_BUF_FAILURE_SEGFAULT,
+  GT_BUF_FAILURE_UNZEROED,
+  GT_BUF_RESULTS_TOOSMALL,
 } gt_buf_result;
 
 typedef struct {
-    size_t size;
-    void*  data;
+  size_t size;
+  void* data;
 } gt_buf;
 
 int gt_buf_init(size_t size, void* data, gt_buf* out_buf);

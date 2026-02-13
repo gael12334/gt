@@ -7,11 +7,11 @@
 #include <stdlib.h>
 
 typedef enum {
-    GT_HEAP_OK,
-    GT_HEAP_INVALID_OUT,
-    GT_HEAP_INVALID_PTR,
-    GT_HEAP_INVALID_OLD,
-    GT_HEAP_FAILURE_ALLOC,
+  GT_HEAP_OK,
+  GT_HEAP_INVALID_OUT,
+  GT_HEAP_INVALID_PTR,
+  GT_HEAP_INVALID_OLD,
+  GT_HEAP_FAILURE_ALLOC,
 } gt_heap_result;
 
 int gt_heap_allocate(size_t size, void** out);

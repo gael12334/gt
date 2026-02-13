@@ -10,8 +10,8 @@
 typedef int (*elf_command)(int, char**);
 
 typedef struct {
-    char* name;
-    elf_command command;
+  char* name;
+  elf_command command;
 } elf_cmdent;
 
 int elf_tokenize(char* text, size_t max_tok, char** tokens, int* tok_num);

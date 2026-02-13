@@ -5,13 +5,11 @@
 #pragma once
 
 typedef struct {
-    const char*  file;
-    unsigned int line;
+  const char* file;
+  unsigned int line;
 } gt_location;
 
-#define GT_HERE           \
-    (gt_location)         \
-    {                     \
-        .file = __FILE__, \
-        .line = __LINE__  \
-    }
+#define GT_HERE                                                                          \
+  (gt_location) {                                                                        \
+    .file = __FILE__, .line = __LINE__                                                   \
+  }

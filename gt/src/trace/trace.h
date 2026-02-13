@@ -5,31 +5,35 @@
 #pragma once
 #include "../location/location.h"
 
-#define GT_TRYTHIS(expr)                 \
-    if (expr) {                          \
-        return gt_trace_foward(GT_HERE); \
-    }
+#define GT_TRYTHIS(expr)                                                                 \
+  if (expr) {                                                                            \
+    return gt_trace_foward(GT_HERE);                                                     \
+  }
 
-#define GT_TRYSAFE(expr, label)       \
-    if (expr) {                       \
-        gt_trace_foward(GT_HERE);     \
-        label;                        \
-        return gt_trace_get_result(); \
-    }
+#define GT_TRYSAFE(expr, label)                                                          \
+  if (expr) {                                                                            \
+    gt_trace_foward(GT_HERE);                                                            \
+    label;                                                                               \
+    return gt_trace_get_result();                                                        \
+  }
 
-#define GT_THROWIF(condition, result)     \
-    if (condition) {                      \
-        return gt_trace(GT_HERE, result); \
-    }
+#define GT_THROWIF(condition, result)                                                    \
+  if (condition) {                                                                       \
+    return gt_trace(GT_HERE, result);                                                    \
+  }
+
+#define gt_trythis(expr) GT_TRYTHIS(expr)
+#define gt_trysafe(expr, label) GT_TRYSAFE(expr, label)
+#define gt_throwif(condition, result) GT_THROWIF(condition, result)
 
 typedef struct {
-    int         result;
-    gt_location location;
+  int result;
+  gt_location location;
 } gt_trace_point;
 
-int  gt_trace(gt_location where, int result);
+int gt_trace(gt_location where, int result);
 void gt_trace_reset(void);
-int  gt_trace_get_size(void);
-int  gt_trace_get_level(unsigned int level, gt_trace_point* out);
-int  gt_trace_get_result(void);
-int  gt_trace_foward(gt_location where);
+int gt_trace_get_size(void);
+int gt_trace_get_level(unsigned int level, gt_trace_point* out);
+int gt_trace_get_result(void);
+int gt_trace_foward(gt_location where);
