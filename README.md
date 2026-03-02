@@ -11,6 +11,10 @@ Copyright © 2026 Gaël Fortier
 The main branch will be updated once changes are completed on the "workspace" branch. 
 Current workspace branch: https://github.com/gael12334/gt/tree/refactor-28Jan26
 
+## See Also 
+
+Hexchunk : A lightweight hexviewer and pattern finder for Linux. (https://github.com/gael12334/hexchunk)
+
 ## Disclaimer
 
 This is a work in progress. 
